@@ -1,0 +1,13 @@
+<h1>{{hash}}</h1>
+
+
+{% for request in requests %}
+<h2>{{request.ip}} {{request.uri}}</h2>
+{{request.headers}}
+{% endfor %}
+
+
+{% for response in responses %}
+<h2>{{response.ip}} {{response.status}}</h2>
+{{response.headers}}
+{% endfor %}

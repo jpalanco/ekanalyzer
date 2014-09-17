@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}EK Analyzer{% endblock %}
+{% block head %}
+    {{ super() }}
+<!-- add custom css and js -->
+{% endblock %}
+
+{% block content %}
+    <h1>Upload a pcap file</h1>
+
+	<form class="pure-form pure-form-aligned" action="/upload-ek/" method="post" enctype="multipart/form-data">
+	    <fieldset>
+
+	        <div class="pure-control-group">
+	            <label for="foo">pcap file</label>
+	            <input id="foo" name="pcap" type="file">
+	        </div>
+
+	        <div class="pure-controls">
+	            <label for="cb" class="pure-checkbox">
+	                <input id="cb" type="checkbox"> I've read the terms and conditions
+	            </label>
+
+	            <button type="submit" class="pure-button pure-button-primary">Submit</button>
+	        </div>
+	    </fieldset>
+	</form>
+
+
+
+{% endblock %}
