@@ -11,13 +11,10 @@ import dpkt
 import sys
 import socket
 
-import requests
-
-import time
 
 from celery import Celery
 
-
+from requests import Request, Session
 
 # FIXME: move to config.py
 ALLOWED_EXTENSIONS = set(['pcap'])
@@ -26,25 +23,33 @@ ALLOWED_EXTENSIONS = set(['pcap'])
 def create_app():
     return Flask("ekanalyzer")
 
-# MONGODB Connection
-connection = Connection("localhost", 27017)
-db = connection.ekanalyzer
-
-
 app = create_app()
 app.config.from_pyfile('config.py')
+
+
+connection = Connection(app.config['MONGODB_SERVER'] , app.config['MONGODB_PORT'])
+db = connection.ekanalyzer
+
 
 app.debug = True
 
 celery = Celery('ekanalyzer', broker=app.config['BROKER_URL'] )
 
 
-
 @celery.task
 def perform_results(hash):
-    time.sleep(20)    
-    print "Iniciando importacion"
     try:
+
+        pcap = {'hash' : hash}
+
+        result = db.pcap.find(pcap)
+
+        if result.count() > 0:
+            return
+        else:
+            db.pcap.insert(pcap)
+
+
         f = open(app.config['UPLOAD_FOLDER'] + hash)
         pcap = dpkt.pcap.Reader(f)
         for ts, buf in pcap:
@@ -54,22 +59,50 @@ def perform_results(hash):
             # FIXME: assuming only http traffic on port 80
             if tcp.dport == 80 and len(tcp.data) > 0:
                 http = dpkt.http.Request(tcp.data)
-                ipaddress =  socket.inet_ntoa(ip.src)
-                #requests.append({ 'ip': ipaddress, 'uri' : http.uri, 'headers' : http.headers, 'hash':hash}) 
+                ipaddress =  socket.inet_ntoa(ip.dst)
                 
                 data = { 'ip' : ipaddress,
                          'uri' : http.uri,
+                         'method' : http.method,
+                         'data' : http.data,
                          'headers' : http.headers,
                          'hash': hash
                        }                      
 
                 db.requests.insert(data)
 
+        print "Data imported"
+        status = process_requests(hash)
+
     except NameError as e:
         print e
     except :
         print "Unexpected error:", sys.exc_info()
         pass
+
+def process_requests(hash):
+    request = { 'hash' : hash}
+    result = db.requests.find(request)
+    for r in result:
+        print process_request(r['ip'], r['uri'], r['method'], r['headers'], r['data'])
+
+def process_request(ip, uri, method, headers, data):
+
+    #FIXME: port 80
+    url = "http://{0}:80{1}".format(ip, uri)
+
+    s = Session()
+    req = Request(method, url,
+        data=data,
+        headers=headers
+    )
+    prepped = req.prepare()
+
+
+    resp = s.send(prepped)
+
+
+    return resp.status_code
 
 
 def allowed_file(filename):
@@ -89,12 +122,12 @@ def upload_file():
             file.seek(0)
             hash_name = "%s" % (hash.hexdigest())
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], hash_name))
-            return redirect(url_for('results', hash=hash_name))
+            return redirect(url_for('launch', hash=hash_name))
 
-@app.route('/results/<hash>/')
-def results(hash):
+@app.route('/launch/<hash>/')
+def launch(hash):
     perform_results.delay(hash)
-    return render_template('results.html', hash=hash)
+    return render_template('launch.html', hash=hash)
 
 
 @app.route('/')
@@ -102,12 +135,6 @@ def index():
     return render_template('index.html')
 
 
-'''
-@app.route('/hello/')
-@app.route('/hello/<name>')
-def hello(name=None):
-    return render_template('hello.html', name=name)
-'''
 
 if __name__ == "__main__":
     app.run(debug=True)
