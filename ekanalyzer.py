@@ -84,10 +84,10 @@ def process_requests(hash):
     request = { 'hash' : hash}
     result = db.requests.find(request)
     for r in result:
-        print process_request.delay(r['ip'], r['uri'], r['method'], r['headers'], r['data'])
+        print process_request.delay(r['ip'], r['uri'], r['method'], r['headers'], r['data'], hash)
 
 @celery.task
-def process_request(ip, uri, method, headers, data):
+def process_request(ip, uri, method, headers, data, hash):
 
     user_agents = app.config['USER_AGENTS']
     for user_agent in user_agents:
@@ -111,7 +111,7 @@ def process_request(ip, uri, method, headers, data):
         UA = m.hexdigest()
 
         # FIXME: hash before user_agent
-        fpath = "workspace/" + UA + "/" + headers['host'] + uri
+        fpath = "workspace/" + hash + "/" + UA + "/" + headers['host'] + uri
         dpath = os.path.dirname(fpath)
 
 
