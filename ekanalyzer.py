@@ -116,9 +116,13 @@ def upload_file():
     if file and allowed_file(file.filename):
  
         hash = hashlib.sha256()
+
         try:
+            # FIXME: it should be saved before calculate sha256
             for chunk in file.chunks():
                 hash.update(chunk)
+        except:
+            print "Unexpected error:", sys.exc_info()
         finally:
             file.seek(0)
             hash_name = "%s" % (hash.hexdigest())
