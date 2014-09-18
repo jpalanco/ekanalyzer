@@ -12,3 +12,6 @@ CELERY_REDIS_DB = 0
 BROKER_URL = 'redis://localhost:6379/0'
 MONGODB_SERVER = 'localhost'
 MONGODB_PORT = 27017
+
+f = open("user_agents.txt")
+USER_AGENTS =  f.readlines()

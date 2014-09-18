@@ -89,21 +89,38 @@ def process_requests(hash):
 @celery.task
 def process_request(ip, uri, method, headers, data):
 
-    #FIXME: port 80
-    url = "http://{0}:80{1}".format(ip, uri)
+    user_agents = app.config['USER_AGENTS']
+    for user_agent in user_agents:
+        headers['user-agent'] = user_agent
 
-    s = Session()
-    req = Request(method, url,
-        data=data,
-        headers=headers
-    )
-    prepped = req.prepare()
+        #FIXME: port 80
+        url = "http://{0}:80{1}".format(ip, uri)
+
+        s = Session()
+        req = Request(method, url,
+            data=data,
+            headers=headers
+        )
+        prepped = req.prepare()
 
 
-    resp = s.send(prepped)
+        resp = s.send(prepped)
+
+        m = hashlib.md5()
+        m.update(user_agent)
+        UA = m.hexdigest()
+
+        # FIXME: hash before user_agent
+        fpath = "workspace/" + UA + "/" + headers['host'] + uri
+        dpath = os.path.dirname(fpath)
 
 
-    return resp.status_code
+        if not os.path.exists(dpath):
+            os.makedirs(dpath)
+
+        with open(fpath, "w") as f:
+            f.write(resp.content)
+
 
 
 def allowed_file(filename):
