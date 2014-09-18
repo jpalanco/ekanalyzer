@@ -5,7 +5,6 @@ from flask import request, redirect, url_for
 from werkzeug import secure_filename
 import hashlib
 
-from celery import Celery
 from pymongo import Connection
 
 import dpkt
@@ -16,41 +15,34 @@ import requests
 
 import time
 
-UPLOAD_FOLDER = 'uploads/'
+from celery import Celery
+
+
+
+# FIXME: move to config.py
 ALLOWED_EXTENSIONS = set(['pcap'])
 
+
+def create_app():
+    return Flask("ekanalyzer")
 
 # MONGODB Connection
 connection = Connection("localhost", 27017)
 db = connection.ekanalyzer
 
 
-app = Flask(__name__)
+app = create_app()
+app.config.from_pyfile('config.py')
+
 app.debug = True
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
-app.config.update(
-    CELERY_BROKER_URL='redis://localhost:6379',
-    CELERY_RESULT_BACKEND='redis://localhost:6379'
-)
 
-def make_celery(app):
-    celery = Celery(app.import_name, broker=app.config['CELERY_BROKER_URL'])
-    celery.conf.update(app.config)
-    TaskBase = celery.Task
-    class ContextTask(TaskBase):
-        abstract = True
-        def __call__(self, *args, **kwargs):
-            with app.app_context():
-                return TaskBase.__call__(self, *args, **kwargs)
-    celery.Task = ContextTask
-    return celery
+celery = Celery('ekanalyzer', broker=app.config['BROKER_URL'] )
 
-celery = make_celery(app)
 
-@celery.task()
+
+@celery.task
 def perform_results(hash):
-    #time.sleep(20)    
+    time.sleep(20)    
     print "Iniciando importacion"
     try:
         f = open(app.config['UPLOAD_FOLDER'] + hash)
@@ -101,13 +93,7 @@ def upload_file():
 
 @app.route('/results/<hash>/')
 def results(hash):
-    result =perform_results.delay(hash)
-    #perform_results(hash)
-    #print (result.ready())
-    #result.get(propagate=True)    
-    print "Sleeping"
-    time.sleep(3)
-    print (result.ready())
+    perform_results.delay(hash)
     return render_template('results.html', hash=hash)
 
 
@@ -123,5 +109,6 @@ def hello(name=None):
     return render_template('hello.html', name=name)
 '''
 
-if __name__ == '__main__':
-    app.run()
+if __name__ == "__main__":
+    app.run(debug=True)
+
