@@ -84,8 +84,9 @@ def process_requests(hash):
     request = { 'hash' : hash}
     result = db.requests.find(request)
     for r in result:
-        print process_request(r['ip'], r['uri'], r['method'], r['headers'], r['data'])
+        print process_request.delay(r['ip'], r['uri'], r['method'], r['headers'], r['data'])
 
+@celery.task
 def process_request(ip, uri, method, headers, data):
 
     #FIXME: port 80
