@@ -43,13 +43,15 @@ celery = Celery('ekanalyzer', broker=app.config['BROKER_URL'] )
 def perform_results(hash):
     try:
 
-        pcap = {'hash' : hash}
+        pcap = {'id' : hash}
 
         result = db.pcap.find(pcap)
 
         if result.count() > 0:
+            print "Ya existe pcap no se hace"
             return
         else:
+            print "Vamos a hacer el pcap"
             db.pcap.insert(pcap)
 
 
@@ -69,7 +71,7 @@ def perform_results(hash):
                          'method' : http.method,
                          'data' : http.data,
                          'headers' : http.headers,
-                         'hash': hash
+                         'id': hash
                        }                      
 
                 db.requests.insert(data)
@@ -83,14 +85,14 @@ def perform_results(hash):
         print "Unexpected error:", sys.exc_info()
         pass
 
-def process_requests(hash):
-    request = { 'hash' : hash}
+def process_requests(id):
+    request = { 'id' : id}
     result = db.requests.find(request)
     for r in result:
-        print process_request.delay(r['ip'], r['uri'], r['method'], r['headers'], r['data'], hash)
+        print process_request.delay(r['ip'], r['uri'], r['method'], r['headers'], r['data'], id)
 
 @celery.task
-def process_request(ip, uri, method, headers, data, hash):
+def process_request(ip, uri, method, headers, data, id):
 
     user_agents = app.config['USER_AGENTS']
     for user_agent in user_agents:
@@ -109,25 +111,34 @@ def process_request(ip, uri, method, headers, data, hash):
 
         resp = s.send(prepped)
 
+        #user agent hash
         m = hashlib.md5()
         m.update(user_agent)
         UA = m.hexdigest()
 
-        fpath = "workspace/" + hash + "/" + UA + "/" + headers['host'] + uri
+        fpath = "workspace/" + id + "/" + UA + "/" + headers['host'] + uri
         dpath = os.path.dirname(fpath)
 
 
         if not os.path.exists(dpath):
             os.makedirs(dpath)
 
+        response = resp.content
+
         with open(fpath, "w") as f:
-            f.write(resp.content)
+            f.write(response)
 
-        m = hashlib.sha256()
+
         m.update(resp.content)
-        response = m.hexdigest()
+        response = m.hexdigest()        
 
-        analysis_data = { 'hash': hash, 'user-agent': user_agent, 'host': headers['host'], 'uri' : uri, 'data' : data, 'status_code': resp.status_code, 'response': response }
+
+        # response 
+        m = hashlib.sha256()
+        m.update(response)
+        hash = m.hexdigest()
+
+        analysis_data = { 'id': id, 'user-agent': user_agent, 'host': headers['host'], 'uri' : uri, 'data' : data, 'status_code': resp.status_code, 'hash': hash  }
 
         db.analysis.insert(analysis_data)
 
@@ -146,8 +157,7 @@ def upload_file():
 
         try:
             # FIXME: it should be saved before calculate sha256
-            for chunk in file.chunks():
-                hash.update(chunk)
+            hash.update(file.read())
         except:
             print "Unexpected error:", sys.exc_info()
         finally:
