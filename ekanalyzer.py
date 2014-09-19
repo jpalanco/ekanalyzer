@@ -14,10 +14,9 @@ import socket
 
 from celery import Celery
 
+import requests
 from requests import Request, Session
 
-
-from vt import vtAPI as vt
 
 # FIXME: move to config.py
 ALLOWED_EXTENSIONS = set(['pcap'])
@@ -48,10 +47,8 @@ def perform_results(hash):
         result = db.pcap.find(pcap)
 
         if result.count() > 0:
-            print "Ya existe pcap no se hace"
             return
         else:
-            print "Vamos a hacer el pcap"
             db.pcap.insert(pcap)
 
 
@@ -79,6 +76,8 @@ def perform_results(hash):
         print "Data imported"
         status = process_requests(hash)
 
+    except AttributeError as e:
+        print e
     except NameError as e:
         print e
     except :
@@ -89,6 +88,7 @@ def process_requests(id):
     request = { 'id' : id}
     result = db.requests.find(request)
     for r in result:
+        print "."        
         print process_request.delay(r['ip'], r['uri'], r['method'], r['headers'], r['data'], id)
 
 @celery.task
@@ -99,6 +99,7 @@ def process_request(ip, uri, method, headers, data, id):
         headers['user-agent'] = user_agent
 
         #FIXME: port 80
+        #FIXME: ConnectionError
         url = "http://{0}:80{1}".format(ip, uri)
 
         s = Session()
@@ -116,6 +117,7 @@ def process_request(ip, uri, method, headers, data, id):
         m.update(user_agent)
         UA = m.hexdigest()
 
+
         fpath = "workspace/" + id + "/" + UA + "/" + headers['host'] + uri
         dpath = os.path.dirname(fpath)
 
@@ -125,20 +127,33 @@ def process_request(ip, uri, method, headers, data, id):
 
         response = resp.content
 
-        with open(fpath, "w") as f:
-            f.write(response)
+        # FIXME: uris ending with / are not saved properly
+        if os.path.isfile(fpath):        
+            with open(fpath, "w") as f:
+                f.write(response)
 
 
         m.update(resp.content)
         response = m.hexdigest()        
 
+        vt_report = ''
 
-        # response 
-        m = hashlib.sha256()
-        m.update(response)
-        hash = m.hexdigest()
+        #if resp.headers['content-type'] != "text/html":
+        if True:
+            # response 
+            m = hashlib.sha256()
+            m.update(response)
+            hash = m.hexdigest()
 
-        analysis_data = { 'id': id, 'user-agent': user_agent, 'host': headers['host'], 'uri' : uri, 'data' : data, 'status_code': resp.status_code, 'hash': hash  }
+            parameters = {"resource": hash, "apikey": app.config["VIRUSTOTAL_API_KEY"]}
+            r = requests.post('https://www.virustotal.com/vtapi/v2/file/report', params=parameters)
+            vt_report = r.text
+
+        #FIXME: add html/javascript analysis here
+
+        #FIXME: add peepdf based analysis here
+
+        analysis_data = { 'id': id, 'user-agent': user_agent, 'host': headers['host'], 'uri' : uri, 'data' : data, 'status_code': resp.status_code, 'hash': hash , 'vt' : vt_report }
 
         db.analysis.insert(analysis_data)
 
