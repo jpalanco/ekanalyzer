@@ -13,7 +13,7 @@ BROKER_URL = 'redis://localhost:6379/0'
 MONGODB_SERVER = 'localhost'
 MONGODB_PORT = 27017
 
-f = open("user_agents.txt")
-USER_AGENTS =  f.readlines()
+
+USER_AGENTS = open("user_agents.txt").read().splitlines()
 
 VIRUSTOTAL_API_KEY = "PUT HERE YOUR API KEY"

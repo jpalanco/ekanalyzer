@@ -102,6 +102,11 @@ def process_request(ip, uri, method, headers, data, id):
         #FIXME: ConnectionError
         url = "http://{0}:80{1}".format(ip, uri)
 
+
+        #proxies = {
+        # "http": "http://127.0.0.1:8080"        
+        #}
+
         s = Session()
         req = Request(method, url,
             data=data,
@@ -110,7 +115,9 @@ def process_request(ip, uri, method, headers, data, id):
         prepped = req.prepare()
 
 
-        resp = s.send(prepped)
+        resp = s.send(prepped, 
+            #proxies=proxies
+        )
 
         #user agent hash
         m = hashlib.md5()
@@ -128,26 +135,30 @@ def process_request(ip, uri, method, headers, data, id):
         response = resp.content
 
         # FIXME: uris ending with / are not saved properly
-        if os.path.isfile(fpath):        
+        if not os.path.isdir(fpath):        
             with open(fpath, "w") as f:
                 f.write(response)
 
 
-        m.update(resp.content)
-        response = m.hexdigest()        
 
-        vt_report = ''
+        # response hash
+        m = hashlib.sha256()
+        m.update(response)
+        hash = m.hexdigest()
+
+        vt_report = None
 
         #if resp.headers['content-type'] != "text/html":
+        # check only, jar, swf, exe, zip, pdf, ocx
         if True:
-            # response 
-            m = hashlib.sha256()
-            m.update(response)
-            hash = m.hexdigest()
 
             parameters = {"resource": hash, "apikey": app.config["VIRUSTOTAL_API_KEY"]}
             r = requests.post('https://www.virustotal.com/vtapi/v2/file/report', params=parameters)
-            vt_report = r.text
+            try:
+                vt_report = r.json()
+            except:
+                vt_report = None
+
 
         #FIXME: add html/javascript analysis here
 
