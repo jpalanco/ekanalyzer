@@ -22,6 +22,9 @@ source env/bin/activate
 pip install -r requirements.txt
 ~~~
 
+Edit the config.py file and introduce your Virus Total API Key
+
+
 ### Launch
 
 Celery (Terminal 1)
