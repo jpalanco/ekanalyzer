@@ -15,3 +15,5 @@ MONGODB_PORT = 27017
 
 f = open("user_agents.txt")
 USER_AGENTS =  f.readlines()
+
+VIRUSTOTAL_API_KEY = "PUT HERE YOUR API KEY"
