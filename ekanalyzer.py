@@ -16,6 +16,9 @@ from celery import Celery
 
 from requests import Request, Session
 
+
+from vt import vtAPI as vt
+
 # FIXME: move to config.py
 ALLOWED_EXTENSIONS = set(['pcap'])
 
@@ -110,7 +113,6 @@ def process_request(ip, uri, method, headers, data, hash):
         m.update(user_agent)
         UA = m.hexdigest()
 
-        # FIXME: hash before user_agent
         fpath = "workspace/" + hash + "/" + UA + "/" + headers['host'] + uri
         dpath = os.path.dirname(fpath)
 
@@ -120,6 +122,14 @@ def process_request(ip, uri, method, headers, data, hash):
 
         with open(fpath, "w") as f:
             f.write(resp.content)
+
+        m = hashlib.sha256()
+        m.update(resp.content)
+        response = m.hexdigest()
+
+        analysis_data = { 'hash': hash, 'user-agent': user_agent, 'host': headers['host'], 'uri' : uri, 'data' : data, 'status_code': resp.status_code, 'response': response }
+
+        db.analysis.insert(analysis_data)
 
 
 
@@ -150,6 +160,11 @@ def upload_file():
 def launch(hash):
     perform_results.delay(hash)
     return render_template('launch.html', hash=hash)
+
+@app.route('/view/<hash>/')
+def view(hash):
+    return render_template('view.html', hash=hash)
+
 
 
 @app.route('/')
