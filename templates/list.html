@@ -8,11 +8,10 @@
 
 {% block content %}
 
+{% for item in analysis %}                
+
 <h1>List</h1>
 
-
-
-{% for item in analysis %}                
 <table class="pure-table">
     <thead>
         <tr>
@@ -24,13 +23,10 @@
 
     <tbody>
 
-
- 
     {% for key, result in item.iteritems() %}                       
      
             <tr>
                 <td>{{key}}</td>
-
                 <td>
                    
                 {% if result %}

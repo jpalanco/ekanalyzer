@@ -10,8 +10,6 @@
 
 
 <h1>User Agents</h1>
-
-
 <table class="pure-table">
     <thead>
         <tr>
@@ -20,40 +18,23 @@
             <th>View</th>
         </tr>
     </thead>
-
     <tbody>
 
-
     {% for request in requests %}
-
         <tr>
-
-        <td>{{ request['user-agent'] }}</td>
-
-
+        <td>{{ request['_id'] }}</td>
         <td>
-
-                {% if request.malicious %}
+                {% if request.value.malicious %}
                     Infected
                 {% else %}
                     Clean 
                 {% endif %}
-
         </td>
-
-
         <td>
-            <a href="{{ url_for('details', hash=request['id'], ua=request['UA']) }}">View</a>
+            <a href="{{ url_for('details', hash=request.value['id'], ua=request.value['UA']) }}">View</a>
         </td>
-
-
         </tr>
-
     {% endfor %}
-
-
     </tbody>
 </table>
-
-
 {% endblock %}

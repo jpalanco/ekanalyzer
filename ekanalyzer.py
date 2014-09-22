@@ -93,6 +93,9 @@ def process_requests(id):
 def process_request(ip, uri, method, headers, data, id):
 
     user_agents = app.config['USER_AGENTS']
+
+    user_agent.append(headers['user-agent'])
+
     for user_agent in user_agents:
         headers['user-agent'] = user_agent
 
@@ -204,9 +207,31 @@ def launch(hash):
 @app.route('/view/<hash>/')
 def view(hash):
 
-    h = { 'id' : hash}
+    #h = { 'id' : hash}
 
-    requests = db.analysis.find(h)    
+    #requests = db.analysis.find(h)    
+
+
+    # FIXME
+    from bson.code import Code
+    map = Code("function () {"
+        "  emit(this['user-agent'], {malicious: this.malicious, UA: this.UA, id : this.id});"
+        "}")
+
+    reduce = Code("function (key, vals) {"
+        "var result = {malicious:0, UA: vals[0].UA, id: vals[0].id};"
+        "vals.forEach(function (value) {result.malicious += value.malicious;});"
+        "return result;"
+        "}")
+
+    results = db.analysis.map_reduce(map, reduce, hash)
+
+    found = results.find()
+
+    requests = []
+
+    for i in found:
+        requests.append(i)
 
     return render_template('view.html', requests=requests)
 
@@ -225,13 +250,10 @@ def list():
         details = []
         for query in queries:
             print query
-            print "-----"
             if query['malicious']:
                malicious = True
 
         analysis.append( {pcap['id'] : malicious})
-
-    print analysis
 
     return render_template('list.html', analysis=analysis)
 
