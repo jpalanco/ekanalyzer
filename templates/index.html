@@ -7,6 +7,10 @@
 {% endblock %}
 
 {% block content %}
+
+    <a href="{{ url_for('list') }}">View analysis</a>
+
+
     <h1>Upload a pcap file</h1>
 
 	<form class="pure-form pure-form-aligned" action="/upload-ek/" method="post" enctype="multipart/form-data">
@@ -27,7 +31,6 @@
 	    </fieldset>
 	</form>
 
-    <a href="{{ url_for('list') }}">View analysis</a>
 
 
 

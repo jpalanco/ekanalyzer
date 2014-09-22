@@ -1,19 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}EK Analyzer{% endblock %}
+{% block head %}
+    {{ super() }}
+<!-- add custom css and js -->
+{% endblock %}
+
+{% block content %}
+
 
 <h1>User Agents</h1>
 
-{% for request in requests %}
+
+<table class="pure-table">
+    <thead>
+        <tr>
+            <th>User Agent</th>
+            <th>Result</th>
+            <th>View</th>
+        </tr>
+    </thead>
+
+    <tbody>
 
 
-<a href="{{ url_for('details', hash=request['id'], ua=request['UA']) }}">{{ request['user-agent'] }} </a>
+    {% for request in requests %}
+
+        <tr>
+
+        <td>{{ request['user-agent'] }}</td>
 
 
+        <td>
 
-{% if request.vt.positives %}
-<strong>{{request.vt.positives}}/{{request.vt.total}}</strong>
-{%endif %}
+                {% if request.malicious %}
+                    Infected
+                {% else %}
+                    Clean 
+                {% endif %}
 
-<br /><br />
+        </td>
 
 
+        <td>
+            <a href="{{ url_for('details', hash=request['id'], ua=request['UA']) }}">View</a>
+        </td>
 
-{% endfor %}
+
+        </tr>
+
+    {% endfor %}
+
+
+    </tbody>
+</table>
+
+
+{% endblock %}

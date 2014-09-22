@@ -1,25 +1,57 @@
-<h1>Listado</h1>
+{% extends "base.html" %}
 
-{% for item in analysis %}                       
+{% block title %}EK Analyzer{% endblock %}
+{% block head %}
+    {{ super() }}
+<!-- add custom css and js -->
+{% endblock %}
+
+{% block content %}
+
+<h1>List</h1>
+
+
+
+{% for item in analysis %}                
+<table class="pure-table">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Result</th>
+            <th>View</th>
+        </tr>
+    </thead>
+
+    <tbody>
+
+
  
-{% for key, value in item.iteritems() %}                       
- 
-<a href="{{ url_for('view', hash=key) }}">{{key}}</a>
+    {% for key, result in item.iteritems() %}                       
+     
+            <tr>
+                <td>{{key}}</td>
 
-{% for vt in value %}                       
+                <td>
+                   
+                {% if result %}
+                    Infected
+                {% else %}
+                    Clean 
+                {% endif %}
 
-{% if vt.positives %}
+                </td>
 
-    {{ vt.positives }}/{{ vt.total }}
+                <td><a href="{{ url_for('view', hash=key) }}">View</a></td>
+            </tr>
 
-{% endif %}
+    {% endfor %}
+
+    </tbody>
+</table>
 
 {% endfor %}
-<br />
 
 
-<hr />
 
-{% endfor %}
 
-{% endfor %}
+{% endblock %}

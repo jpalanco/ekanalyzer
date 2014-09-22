@@ -146,6 +146,8 @@ def process_request(ip, uri, method, headers, data, id):
 
         vt_report = None
 
+        malicious = False
+
         #if resp.headers['content-type'] != "text/html":
         # check only, jar, swf, exe, zip, pdf, ocx
         if True:
@@ -154,7 +156,11 @@ def process_request(ip, uri, method, headers, data, id):
             r = requests.post('https://www.virustotal.com/vtapi/v2/file/report', params=parameters)
             try:
                 vt_report = r.json()
+                if vt_report['positives'] > 0:
+                    malicious = True
+
             except:
+                #print "Unexpected error:", sys.exc_info()
                 vt_report = None
 
 
@@ -162,7 +168,7 @@ def process_request(ip, uri, method, headers, data, id):
 
         #FIXME: add peepdf based analysis here
 
-        analysis_data = { 'id': id, 'user-agent': user_agent, 'UA' : UA,  'host': headers['host'], 'uri' : uri, 'data' : data, 'status_code': resp.status_code, 'hash': hash , 'vt' : vt_report }
+        analysis_data = { 'id': id,  'malicious': malicious, 'user-agent': user_agent, 'UA' : UA,  'host': headers['host'], 'uri' : uri, 'data' : data, 'status_code': resp.status_code, 'hash': hash , 'vt' : vt_report }
 
         db.analysis.insert(analysis_data)
 
@@ -211,14 +217,19 @@ def list():
 
     analysis = []
 
+    malicious = False
+
     for pcap in pcaps:
         h = { 'id' : pcap['id']}
         queries = db.analysis.find(h)
         details = []
         for query in queries:
-            details.append(query['vt'])
+            print query
+            print "-----"
+            if query['malicious']:
+               malicious = True
 
-        analysis.append( {pcap['id'] : details})
+        analysis.append( {pcap['id'] : malicious})
 
     print analysis
 

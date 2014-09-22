@@ -1,13 +1,1 @@
-<p>A new task has been created for {{hash}}</p>
-
-
-{% for request in requests %}
-<h2>{{request.ip}} {{request.uri}}</h2>
-{{request.headers}}
-{% endfor %}
-
-
-{% for response in responses %}
-<h2>{{response.ip}} {{response.status}}</h2>
-{{response.headers}}
-{% endfor %}
+<p>A new task has been created for  <a href="{{ url_for('view', hash=hash) }}">{{hash}}</a></p>

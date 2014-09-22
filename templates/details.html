@@ -1,36 +1,82 @@
-<h1>details</h1>
+{% extends "base.html" %}
+
+{% block title %}EK Analyzer{% endblock %}
+{% block head %}
+    {{ super() }}
+<!-- add custom css and js -->
+{% endblock %}
+
+{% block content %}
+
+<h1>Details</h1>
 
 
 {% for request in requests %}
 
+<table class="pure-table">
+    <tbody>
 
-<h2>{{request['uri']}}</h2>
+    <tr>
+        <td>URI</td>
+        <td>{{request['uri']}}</td>
+    </tr>
 
-{{request['user-agent']}}<br />
-{{request['host']}}<br />
+    <tr>    
+        <td>User Agent</td>
+        <td>{{request['user-agent']}}</td>
+    </tr>
 
-<h3>Scan</h3>
+    <tr>    
+        <td>Host</td>
+        <td>{{request['host']}}</td>
+    </tr>
 
-{% if request.vt.permalink %}
-<a href="{{request.vt.permalink}}">VT site</a><br />
-{% endif %}
+    <tr>
+        <td>VT</td>
+        <td>
+
+        {% if request.vt.positives %}
+            <strong>{{request.vt.positives}}/{{request.vt.total}}</strong>
+        {% else %}
+            <i>No detections</i>
+        {% endif %}
 
 
-{% if request.vt.positives %}
-<strong>{{request.vt.positives}}/{{request.vt.total}}</strong><br /><br />
-{% else %}
-<i>No detections</i>
-{% endif %}
+        {% if request.vt.permalink %}
+            <a href="{{request.vt.permalink}}">View VT Report</a> 
+        {% endif %}
 
-{% for av in request['vt']['scans']  %}
 
-{% if  request['vt']['scans'][av]['detected'] %}
- {{av}}  {{request['vt']['scans'][av]['version']}}  = {{request['vt']['scans'][av]['result']}} <br />
-{% endif %}
+
+        <!--
+            {% for av in request['vt']['scans']  %}
+
+                {% if  request['vt']['scans'][av]['detected'] %}
+                 {{av}}  {{request['vt']['scans'][av]['version']}}  = {{request['vt']['scans'][av]['result']}} <br />
+                {% endif %}
+
+            {% endfor %}
+
+        -->
+
+
+        </td>
+    
+
+</td>        
+    </tr>
+
+
+
+
+
+
+
+    </tbody>
+</table>
+<br />
 
 {% endfor %}
 
-</pre>
 
-{% endfor %}
-
+{% endblock %}
