@@ -1,3 +1,19 @@
 
+<h1>User Agents</h1>
 
-details
+{% for request in requests %}
+
+
+<a href="{{ url_for('details', hash=request['id'], ua=request['UA']) }}">{{ request['user-agent'] }} </a>
+
+
+
+{% if request.vt.positives %}
+<strong>{{request.vt.positives}}/{{request.vt.total}}</strong>
+{%endif %}
+
+<br /><br />
+
+
+
+{% endfor %}

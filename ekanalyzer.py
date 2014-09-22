@@ -73,7 +73,6 @@ def perform_results(hash):
 
                 db.requests.insert(data)
 
-        print "Data imported"
         status = process_requests(hash)
 
     except AttributeError as e:
@@ -88,7 +87,6 @@ def process_requests(id):
     request = { 'id' : id}
     result = db.requests.find(request)
     for r in result:
-        print "."        
         print process_request.delay(r['ip'], r['uri'], r['method'], r['headers'], r['data'], id)
 
 @celery.task
@@ -164,7 +162,7 @@ def process_request(ip, uri, method, headers, data, id):
 
         #FIXME: add peepdf based analysis here
 
-        analysis_data = { 'id': id, 'user-agent': user_agent, 'host': headers['host'], 'uri' : uri, 'data' : data, 'status_code': resp.status_code, 'hash': hash , 'vt' : vt_report }
+        analysis_data = { 'id': id, 'user-agent': user_agent, 'UA' : UA,  'host': headers['host'], 'uri' : uri, 'data' : data, 'status_code': resp.status_code, 'hash': hash , 'vt' : vt_report }
 
         db.analysis.insert(analysis_data)
 
@@ -199,8 +197,42 @@ def launch(hash):
 
 @app.route('/view/<hash>/')
 def view(hash):
-    return render_template('view.html', hash=hash)
 
+    h = { 'id' : hash}
+
+    requests = db.analysis.find(h)    
+
+    return render_template('view.html', requests=requests)
+
+@app.route('/list')
+def list():
+
+    pcaps = db.pcap.find()
+
+    analysis = []
+
+    for pcap in pcaps:
+        h = { 'id' : pcap['id']}
+        queries = db.analysis.find(h)
+        details = []
+        for query in queries:
+            details.append(query['vt'])
+
+        analysis.append( {pcap['id'] : details})
+
+    print analysis
+
+    return render_template('list.html', analysis=analysis)
+
+
+@app.route('/details/<hash>/<ua>/')
+def details(hash, ua):
+
+    user_agent = { 'UA' : ua, 'id' : hash}
+
+    requests = db.analysis.find(user_agent)    
+
+    return render_template('details.html', requests=requests)
 
 
 @app.route('/')

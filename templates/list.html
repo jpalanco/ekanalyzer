@@ -1,0 +1,25 @@
+<h1>Listado</h1>
+
+{% for item in analysis %}                       
+ 
+{% for key, value in item.iteritems() %}                       
+ 
+<a href="{{ url_for('view', hash=key) }}">{{key}}</a>
+
+{% for vt in value %}                       
+
+{% if vt.positives %}
+
+    {{ vt.positives }}/{{ vt.total }}
+
+{% endif %}
+
+{% endfor %}
+<br />
+
+
+<hr />
+
+{% endfor %}
+
+{% endfor %}

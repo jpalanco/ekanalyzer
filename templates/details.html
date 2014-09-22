@@ -1,0 +1,36 @@
+<h1>details</h1>
+
+
+{% for request in requests %}
+
+
+<h2>{{request['uri']}}</h2>
+
+{{request['user-agent']}}<br />
+{{request['host']}}<br />
+
+<h3>Scan</h3>
+
+{% if request.vt.permalink %}
+<a href="{{request.vt.permalink}}">VT site</a><br />
+{% endif %}
+
+
+{% if request.vt.positives %}
+<strong>{{request.vt.positives}}/{{request.vt.total}}</strong><br /><br />
+{% else %}
+<i>No detections</i>
+{% endif %}
+
+{% for av in request['vt']['scans']  %}
+
+{% if  request['vt']['scans'][av]['detected'] %}
+ {{av}}  {{request['vt']['scans'][av]['version']}}  = {{request['vt']['scans'][av]['result']}} <br />
+{% endif %}
+
+{% endfor %}
+
+</pre>
+
+{% endfor %}
+
