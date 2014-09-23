@@ -8,7 +8,7 @@ Install
 Install mongo, redis and clamav:
 
 ~~~
-sudo apt-get install mongodb redis clamav
+sudo apt-get install mongodb redis-server clamav-daemon
 ~~~
 
 Install yara
@@ -19,9 +19,10 @@ Install yara
 ~~~
 sudo pip install virtualenv
 cd ekanalyzer
-virtualenv env
-source env/bin/activate
+virtualenv venv
+source venv/bin/activate
 pip install -r requirements.txt
+mkdir uploads
 ~~~
 
 Edit the config.py file and introduce your Virus Total API Key

@@ -45,9 +45,22 @@
     {% if request['yara'] %}
     <tr>    
         <td>Yara</td>
-        <td>{{request['yara']}}</td>
+        <td>
+            {% for y in request['yara'].main %}
+            {{y.rule}}<br />
+            {% endfor %}
+        </td>
     </tr>
     {% endif %}
+
+
+
+    {% if request['clamav'] %}
+    <tr>    
+        <td>ClamAV</td>
+        <td>{{request['clamav']}}</td>
+    </tr>
+    {% endif %}    
 
     <tr>
         <td>VT</td>
