@@ -106,7 +106,10 @@ def process_request(ip, uri, method, headers, data, id):
 
     user_agents = app.config['USER_AGENTS']
 
-    user_agents.append(headers['user-agent'])
+    if 'user-agent' in headers:
+        user_agents.append(headers['user-agent'])
+    else:
+        user_agents.append("")
 
     for user_agent in user_agents:
         headers['user-agent'] = user_agent
@@ -193,7 +196,7 @@ def process_request(ip, uri, method, headers, data, id):
 
         # Prepare for YARA        
         if mimetype == "application/x-shockwave-flash" and filetype.find("CWS"):
-            print "compressed SWF detected"
+            #print "compressed SWF detected"
             f = open(fpath, "rb")
             f.read(3) # skip 3 bytes
             tmp = 'FWS' + f.read(5) + zlib.decompress(f.read())
@@ -207,8 +210,6 @@ def process_request(ip, uri, method, headers, data, id):
         ymatches = rules.match(data=ydata)
 
         # FIXME: parse yara results and update 'malicious' variable
-
-
 
         #FIXME: add html/javascript analysis here
 
@@ -250,29 +251,29 @@ def launch(hash):
 @app.route('/view/<hash>/')
 def view(hash):
 
-    #h = { 'id' : hash}
+    h = { "_id.hash" : hash }
 
     #requests = db.analysis.find(h)    
 
 
     # map/reduce
     map = Code("function () {"
-        "  emit(this['user-agent'], {malicious: this.malicious, UA: this.UA, id : this.id});"
+        "  emit({ hash : this['id'], UA : this.UA, 'user-agent' : this['user-agent']}, {malicious: this.malicious, UA: this.UA});"
         "}")
 
     reduce = Code("function (key, vals) {"
-        "var result = {malicious:0, UA: vals[0].UA, id: vals[0].id};"
+        "var result = {malicious:0 };"
         "vals.forEach(function (value) {result.malicious += value.malicious;});"
         "return result;"
         "}")
 
-    results = db.analysis.map_reduce(map, reduce, hash)
+    results = db.analysis.map_reduce(map, reduce, 'malicious')
 
-    found = results.find()
-
+    found = results.find(h)
     requests = []
 
     for i in found:
+        print i
         requests.append(i)
 
     return render_template('view.html', requests=requests)
@@ -294,19 +295,14 @@ def list():
             print query
             if query['malicious']:
                malicious = True
-
         analysis.append( {pcap['id'] : malicious})
-
     return render_template('list.html', analysis=analysis)
 
 
 @app.route('/details/<hash>/<ua>/')
 def details(hash, ua):
-
     user_agent = { 'UA' : ua, 'id' : hash}
-
     requests = db.analysis.find(user_agent)    
-
     return render_template('details.html', requests=requests)
 
 

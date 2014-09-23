@@ -53,17 +53,20 @@
         <td>VT</td>
         <td>
 
-        {% if request.vt.positives %}
-            <strong>{{request.vt.positives}}/{{request.vt.total}}</strong>
+
+        {% if request.vt %}
+
+            {% if request.vt.positives %}
+                <strong>{{request.vt.positives}}/{{request.vt.total}}</strong>
+            {% else %}
+                <i>No detections</i>
+            {% endif %}
+            {% if request.vt.permalink %}
+                <a href="{{request.vt.permalink}}">View VT Report</a> 
+            {% endif %}
         {% else %}
-            <i>No detections</i>
+                <i>Not analyzed</i>
         {% endif %}
-
-
-        {% if request.vt.permalink %}
-            <a href="{{request.vt.permalink}}">View VT Report</a> 
-        {% endif %}
-
 
 
         <!--

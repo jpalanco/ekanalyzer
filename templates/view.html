@@ -18,7 +18,7 @@
     <tbody>
     {% for request in requests %}
         <tr>
-        <td>{{ request['_id'] }}</td>
+        <td>{{ request['_id']['user-agent'] }}</td>
         <td>
                 {% if request.value.malicious %}
                     Infected
@@ -27,7 +27,7 @@
                 {% endif %}
         </td>
         <td>
-            <a href="{{ url_for('details', hash=request.value['id'], ua=request.value['UA']) }}">View</a>
+            <a href="{{ url_for('details', hash=request['_id']['hash'], ua=request['_id']['UA']) }}">View</a>
         </td>
         </tr>
     {% endfor %}
