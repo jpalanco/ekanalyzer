@@ -28,7 +28,7 @@ import pyclamd
 ALLOWED_EXTENSIONS = set(['pcap'])
 
 
-rules = yara.compile(filepath='ekanalyzer.rules')
+rules = yara.compile(filepath='yara/ekanalyzer.yar')
 cd = pyclamd.ClamdAgnostic()
 
 def create_app():
@@ -204,6 +204,7 @@ def process_request(ip, uri, method, headers, data, id):
                 vt_report = None
 
         # Prepare for YARA        
+        # FICME: ZWS http://malware-traffic-analysis.net/2014/09/23/index.html
         if mimetype == "application/x-shockwave-flash" and filetype.find("CWS"):
             #print "compressed SWF detected"
             f = open(fpath, "rb")
@@ -217,7 +218,10 @@ def process_request(ip, uri, method, headers, data, id):
             unpacked = response
 
         ymatches = rules.match(data=unpacked)
-        # FIXME: parse yara results and update 'malicious' variable
+        if not bool(ymatches):
+            ymatches = None
+        else:
+            malicious = True
 
 
         # ClamAV analysis
