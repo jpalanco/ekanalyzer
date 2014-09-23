@@ -5,10 +5,7 @@
     {{ super() }}
 <!-- add custom css and js -->
 {% endblock %}
-
 {% block content %}
-
-
 <h1>User Agents</h1>
 <table class="pure-table">
     <thead>
@@ -19,7 +16,6 @@
         </tr>
     </thead>
     <tbody>
-
     {% for request in requests %}
         <tr>
         <td>{{ request['_id'] }}</td>

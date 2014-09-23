@@ -94,7 +94,7 @@ def process_request(ip, uri, method, headers, data, id):
 
     user_agents = app.config['USER_AGENTS']
 
-    user_agent.append(headers['user-agent'])
+    user_agents.append(headers['user-agent'])
 
     for user_agent in user_agents:
         headers['user-agent'] = user_agent
