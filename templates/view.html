@@ -18,7 +18,11 @@
     <tbody>
     {% for request in requests %}
         <tr>
-        <td>{{ request['_id']['user-agent'] }}</td>
+            <td>
+                {% if original_ua == request['_id']['user-agent'] %} <strong> {% endif %}
+                {{ request['_id']['user-agent'] }}
+                {% if original_ua == request['_id']['user-agent'] %} </strong> {% endif %}                
+            </td>
         <td>
                 {% if request.value.malicious %}
                     Infected

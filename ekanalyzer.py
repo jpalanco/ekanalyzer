@@ -26,9 +26,8 @@ import pyclamd
 
 # FIXME: move to config.py
 ALLOWED_EXTENSIONS = set(['pcap'])
-
-
 rules = yara.compile(filepath='yara/ekanalyzer.yar')
+
 cd = pyclamd.ClamdAgnostic()
 
 def create_app():
@@ -204,7 +203,7 @@ def process_request(ip, uri, method, headers, data, id):
                 vt_report = None
 
         # Prepare for YARA        
-        # FICME: ZWS http://malware-traffic-analysis.net/2014/09/23/index.html
+        # FIXME: ZWS http://malware-traffic-analysis.net/2014/09/23/index.html
         if mimetype == "application/x-shockwave-flash" and filetype.find("CWS"):
             #print "compressed SWF detected"
             f = open(fpath, "rb")
@@ -294,7 +293,11 @@ def view(hash):
         print i
         requests.append(i)
 
-    return render_template('view.html', requests=requests)
+    original_request = db.requests.find_one({"id": hash})
+    original_ua = original_request['headers']['user-agent']
+
+
+    return render_template('view.html', requests=requests, original_ua=original_ua)
 
 @app.route('/list')
 def list():
@@ -304,6 +307,7 @@ def list():
     analysis = []
 
     malicious = False
+
 
     for pcap in pcaps:
         h = { 'id' : pcap['id']}
@@ -321,6 +325,7 @@ def list():
 def details(hash, ua):
     user_agent = { 'UA' : ua, 'id' : hash}
     requests = db.analysis.find(user_agent)    
+
     return render_template('details.html', requests=requests)
 
 
