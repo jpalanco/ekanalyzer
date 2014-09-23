@@ -10,6 +10,7 @@ dpkt==1.8
 itsdangerous==0.24
 kombu==3.0.23
 pymongo==2.7.2
+python-magic==0.4.6
 pytz==2014.7
 redis==2.10.3
 requests==2.4.1

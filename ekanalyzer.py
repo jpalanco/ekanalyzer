@@ -6,6 +6,7 @@ from werkzeug import secure_filename
 import hashlib
 
 from pymongo import Connection
+from bson.code import Code
 
 import dpkt
 import sys
@@ -16,6 +17,9 @@ from celery import Celery
 
 import requests
 from requests import Request, Session
+
+import magic
+import zlib
 
 
 # FIXME: move to config.py
@@ -52,7 +56,7 @@ def perform_results(hash):
             db.pcap.insert(pcap)
 
 
-        f = open(app.config['UPLOAD_FOLDER'] + hash)
+        f = open(app.config['UPLOAD_FOLDER'] + hash, "rb")
         pcap = dpkt.pcap.Reader(f)
         for ts, buf in pcap:
             eth = dpkt.ethernet.Ethernet(buf)
@@ -70,18 +74,21 @@ def perform_results(hash):
                          'headers' : http.headers,
                          'id': hash
                        }                      
+                db.requests.insert(data)                       
+            #else:
+            #    print "Port is " + str(tcp.dport)
 
-                db.requests.insert(data)
-
-        status = process_requests(hash)
-
+    except dpkt.NeedData as e:
+        print e
     except AttributeError as e:
         print e
     except NameError as e:
         print e
     except :
         print "Unexpected error:", sys.exc_info()
-        pass
+    finally:
+        status = process_requests(hash)
+
 
 def process_requests(id):
     request = { 'id' : id}
@@ -92,12 +99,14 @@ def process_requests(id):
 @celery.task
 def process_request(ip, uri, method, headers, data, id):
 
+
     user_agents = app.config['USER_AGENTS']
 
     user_agents.append(headers['user-agent'])
 
     for user_agent in user_agents:
         headers['user-agent'] = user_agent
+
 
         #FIXME: port 80
         #FIXME: ConnectionError
@@ -147,14 +156,23 @@ def process_request(ip, uri, method, headers, data, id):
         m.update(response)
         hash = m.hexdigest()
 
+
+        # filetype & mimetype
+        filetype = magic.from_buffer(response)
+        mimetype = magic.from_buffer(response, mime=True)
+
+
         vt_report = None
 
         malicious = False
 
-        #if resp.headers['content-type'] != "text/html":
-        # check only, jar, swf, exe, zip, pdf, ocx
-        if True:
+        if mimetype == "application/octet-stream" \
+            or mimetype == "application/java-archive" \
+            or mimetype == "application/zip" \
+            or mimetype == "'application/pdf'" \
+            or mimetype == "application/x-shockwave-flash":
 
+            # FIME: cache for repeated analysis
             parameters = {"resource": hash, "apikey": app.config["VIRUSTOTAL_API_KEY"]}
             r = requests.post('https://www.virustotal.com/vtapi/v2/file/report', params=parameters)
             try:
@@ -166,12 +184,23 @@ def process_request(ip, uri, method, headers, data, id):
                 #print "Unexpected error:", sys.exc_info()
                 vt_report = None
 
+        if mimetype == "application/x-shockwave-flash":
+            if filetype.find("CWS"):
+                print "compressed SWF detected"
+                f = open(fpath, "rb")
+                f.read(3) # skip 3 bytes
+                tmp = 'FWS' + f.read(5) + zlib.decompress(f.read())
+                decompressed = fpath + "decompressed"
+                with open(decompressed, "w") as f:
+                    f.write(tmp)
+                # FIXM: Yara analysis here
+
 
         #FIXME: add html/javascript analysis here
 
         #FIXME: add peepdf based analysis here
 
-        analysis_data = { 'id': id,  'malicious': malicious, 'user-agent': user_agent, 'UA' : UA,  'host': headers['host'], 'uri' : uri, 'data' : data, 'status_code': resp.status_code, 'hash': hash , 'vt' : vt_report }
+        analysis_data = { 'id': id,  'malicious': malicious, 'filetype': filetype,'mimetype': mimetype,  'user-agent': user_agent, 'UA' : UA,  'host': headers['host'], 'uri' : uri, 'data' : data, 'status_code': resp.status_code, 'hash': hash , 'vt' : vt_report }
 
         db.analysis.insert(analysis_data)
 
@@ -213,7 +242,6 @@ def view(hash):
 
 
     # FIXME
-    from bson.code import Code
     map = Code("function () {"
         "  emit(this['user-agent'], {malicious: this.malicious, UA: this.UA, id : this.id});"
         "}")
