@@ -192,18 +192,21 @@ def process_request(ip, uri, method, headers, data, id):
                 vt_report = None
 
         # Prepare for YARA        
-        if mimetype == "application/x-shockwave-flash":
-            if filetype.find("CWS"):
-                print "compressed SWF detected"
-                f = open(fpath, "rb")
-                f.read(3) # skip 3 bytes
-                tmp = 'FWS' + f.read(5) + zlib.decompress(f.read())
-                decompressed = fpath + ".decompressed"
-                with open(decompressed, "w") as f:
-                    f.write(tmp)
-                ymatches = rules.match(tmp)
+        if mimetype == "application/x-shockwave-flash" and filetype.find("CWS"):
+            print "compressed SWF detected"
+            f = open(fpath, "rb")
+            f.read(3) # skip 3 bytes
+            tmp = 'FWS' + f.read(5) + zlib.decompress(f.read())
+            decompressed = fpath + ".decompressed"
+            with open(decompressed, "w") as f:
+                f.write(tmp)
+            ydata =tmp
         else:
-                ymatches = rules.match(response)
+            ydata = response
+
+        ymatches = rules.match(data=ydata)
+
+        # FIXME: parse yara results and update 'malicious' variable
 
 
 
@@ -252,7 +255,7 @@ def view(hash):
     #requests = db.analysis.find(h)    
 
 
-    # FIXME
+    # map/reduce
     map = Code("function () {"
         "  emit(this['user-agent'], {malicious: this.malicious, UA: this.UA, id : this.id});"
         "}")
