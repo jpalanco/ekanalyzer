@@ -22,13 +22,14 @@ import magic
 import zlib
 
 import yara
+import pyclamd
 
 # FIXME: move to config.py
 ALLOWED_EXTENSIONS = set(['pcap'])
 
 
 rules = yara.compile(filepath='ekanalyzer.rules')
-
+cd = pyclamd.ClamdAgnostic()
 
 def create_app():
     return Flask("ekanalyzer")
@@ -106,6 +107,7 @@ def process_request(ip, uri, method, headers, data, id):
 
     user_agents = app.config['USER_AGENTS']
 
+    # FIXME: check case
     if 'user-agent' in headers:
         user_agents.append(headers['user-agent'])
     else:
@@ -176,6 +178,13 @@ def process_request(ip, uri, method, headers, data, id):
         ymatches = None
 
 
+        
+        #
+        # This function uses response (buffer) and fpath (path to file)
+        # FIX this as soon as the "/" bug be fixed
+        #
+
+
         # Send to VT
         if mimetype == "application/octet-stream" \
             or mimetype == "application/java-archive" \
@@ -203,19 +212,25 @@ def process_request(ip, uri, method, headers, data, id):
             decompressed = fpath + ".decompressed"
             with open(decompressed, "w") as f:
                 f.write(tmp)
-            ydata =tmp
+            unpacked =tmp
         else:
-            ydata = response
+            unpacked = response
 
-        ymatches = rules.match(data=ydata)
-
+        ymatches = rules.match(data=unpacked)
         # FIXME: parse yara results and update 'malicious' variable
+
+
+        # ClamAV analysis
+        clamav = cd.scan_stream(unpacked)
+        if clamav:
+            malicious = True
+
 
         #FIXME: add html/javascript analysis here
 
         #FIXME: add peepdf based analysis here
 
-        analysis_data = { 'id': id,  'malicious': malicious, 'filetype': filetype,'mimetype': mimetype, 'yara' : ymatches, 'user-agent': user_agent, 'UA' : UA,  'host': headers['host'], 'uri' : uri, 'data' : data, 'status_code': resp.status_code, 'hash': hash , 'vt' : vt_report }
+        analysis_data = { 'id': id,  'malicious': malicious, 'filetype': filetype,'mimetype': mimetype, 'yara' : ymatches, 'clamav' : clamav, 'user-agent': user_agent, 'UA' : UA,  'host': headers['host'], 'uri' : uri, 'data' : data, 'status_code': resp.status_code, 'hash': hash , 'vt' : vt_report }
 
         db.analysis.insert(analysis_data)
 
@@ -255,16 +270,15 @@ def view(hash):
 
     #requests = db.analysis.find(h)    
 
-
-    # map/reduce
+    # FIXME: this map/reduce is executed each time view is requested
     map = Code("function () {"
         "  emit({ hash : this['id'], UA : this.UA, 'user-agent' : this['user-agent']}, {malicious: this.malicious, UA: this.UA});"
         "}")
 
     reduce = Code("function (key, vals) {"
-        "var result = {malicious:0 };"
-        "vals.forEach(function (value) {result.malicious += value.malicious;});"
-        "return result;"
+        "  var result = {malicious:0 };"
+        "  vals.forEach(function (value) {result.malicious += value.malicious;});"
+        "  return result;"
         "}")
 
     results = db.analysis.map_reduce(map, reduce, 'malicious')

@@ -5,11 +5,13 @@ Install
 
 ### Install services
 
-Install mongo and redis:
+Install mongo, redis and clamav:
 
 ~~~
-sudo apt-get install mongodb redis
+sudo apt-get install mongodb redis clamav
 ~~~
+
+Install yara
 
 ### Virtual enviroment
 

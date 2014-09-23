@@ -9,9 +9,11 @@ celery==3.1.15
 dpkt==1.8
 itsdangerous==0.24
 kombu==3.0.23
+pyClamd==0.3.10
 pymongo==2.7.2
 python-magic==0.4.6
 pytz==2014.7
 redis==2.10.3
 requests==2.4.1
 wsgiref==0.1.2
+yara==1.7.7
