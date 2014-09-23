@@ -42,6 +42,12 @@
         <td>{{request['mimetype']}}</td>
     </tr>
 
+    {% if request['yara'] %}
+    <tr>    
+        <td>Yara</td>
+        <td>{{request['yara']}}</td>
+    </tr>
+    {% endif %}
 
     <tr>
         <td>VT</td>

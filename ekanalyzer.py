@@ -21,9 +21,13 @@ from requests import Request, Session
 import magic
 import zlib
 
+import yara
 
 # FIXME: move to config.py
 ALLOWED_EXTENSIONS = set(['pcap'])
+
+
+rules = yara.compile(filepath='ekanalyzer.rules')
 
 
 def create_app():
@@ -166,6 +170,10 @@ def process_request(ip, uri, method, headers, data, id):
 
         malicious = False
 
+        ymatches = None
+
+
+        # Send to VT
         if mimetype == "application/octet-stream" \
             or mimetype == "application/java-archive" \
             or mimetype == "application/zip" \
@@ -179,28 +187,31 @@ def process_request(ip, uri, method, headers, data, id):
                 vt_report = r.json()
                 if vt_report['positives'] > 0:
                     malicious = True
-
             except:
                 #print "Unexpected error:", sys.exc_info()
                 vt_report = None
 
+        # Prepare for YARA        
         if mimetype == "application/x-shockwave-flash":
             if filetype.find("CWS"):
                 print "compressed SWF detected"
                 f = open(fpath, "rb")
                 f.read(3) # skip 3 bytes
                 tmp = 'FWS' + f.read(5) + zlib.decompress(f.read())
-                decompressed = fpath + "decompressed"
+                decompressed = fpath + ".decompressed"
                 with open(decompressed, "w") as f:
                     f.write(tmp)
-                # FIXM: Yara analysis here
+                ymatches = rules.match(tmp)
+        else:
+                ymatches = rules.match(response)
+
 
 
         #FIXME: add html/javascript analysis here
 
         #FIXME: add peepdf based analysis here
 
-        analysis_data = { 'id': id,  'malicious': malicious, 'filetype': filetype,'mimetype': mimetype,  'user-agent': user_agent, 'UA' : UA,  'host': headers['host'], 'uri' : uri, 'data' : data, 'status_code': resp.status_code, 'hash': hash , 'vt' : vt_report }
+        analysis_data = { 'id': id,  'malicious': malicious, 'filetype': filetype,'mimetype': mimetype, 'yara' : ymatches, 'user-agent': user_agent, 'UA' : UA,  'host': headers['host'], 'uri' : uri, 'data' : data, 'status_code': resp.status_code, 'hash': hash , 'vt' : vt_report }
 
         db.analysis.insert(analysis_data)
 
