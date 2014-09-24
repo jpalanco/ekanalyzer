@@ -302,7 +302,7 @@ def view(hash):
     requests = []
 
     for i in found:
-        print i
+        #print i
         requests.append(i)
 
     original_request = db.requests.find_one({"id": hash})
