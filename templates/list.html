@@ -30,11 +30,24 @@
                 <td>{{key}}</td>
                 <td>
                    
-                {% if result %}
-                    Infected
+                {% if result.malicious > 0 %}
+                    Malicious<br />
+
                 {% else %}
-                    Clean 
+
+                    {% if result.suspicious > 0  %}
+                        Suspicious
+                    {% else %}
+
+                        {% if result.clean > 0 %}
+                            Clean
+                        {% endif %}
+
+                    {% endif %}                
+
                 {% endif %}
+
+
 
                 </td>
 

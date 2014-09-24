@@ -6,13 +6,13 @@
 <!-- add custom css and js -->
 {% endblock %}
 {% block content %}
-<h1>User Agents</h1>
+<h1>Overview</h1>
 <table class="pure-table">
     <thead>
         <tr>
             <th>User Agent</th>
-            <th>Result</th>
-            <th>View</th>
+            <th>Stats</th>
+            <th>Details</th>
         </tr>
     </thead>
     <tbody>
@@ -24,11 +24,12 @@
                 {% if original_ua == request['_id']['user-agent'] %} </strong> {% endif %}                
             </td>
         <td>
-                {% if request.value.malicious %}
-                    Infected
-                {% else %}
-                    Clean 
-                {% endif %}
+
+                Malicious: {{request.value.malicious}}<br />
+                Suspicious: {{request.value.suspicious}}<br />
+                Clean: {{request.value.clean}}<br />
+
+
         </td>
         <td>
             <a href="{{ url_for('details', hash=request['_id']['hash'], ua=request['_id']['UA']) }}">View</a>

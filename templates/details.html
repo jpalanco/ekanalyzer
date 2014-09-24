@@ -54,7 +54,6 @@
     {% endif %}
 
 
-
     {% if request['clamav'] %}
     <tr>    
         <td>ClamAV</td>
@@ -93,14 +92,19 @@
 
         -->
 
-
-        </td>
-    
-
-</td>        
+        </td>       
     </tr>
 
-
+    <tr>    
+        <td>Tags</td>
+        <td>
+            {% for t in request['tags'] %}
+                {% if request['tags'][t] > 0 %}
+                    {{t}}<br />
+                {% endif %}
+            {% endfor %}
+        </td>
+    </tr>
 
 
 

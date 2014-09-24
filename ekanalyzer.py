@@ -172,7 +172,8 @@ def process_request(ip, uri, method, headers, data, id):
 
         vt_report = None
 
-        malicious = False
+        tags = { 'clean' : 0, 'suspicious' : 0, 'malicious' : 0 }
+        malicious = False        
 
         ymatches = None
 
@@ -197,6 +198,7 @@ def process_request(ip, uri, method, headers, data, id):
             try:
                 vt_report = r.json()
                 if vt_report['positives'] > 0:
+                    tags['malicious'] += 1
                     malicious = True
             except:
                 #print "Unexpected error:", sys.exc_info()
@@ -220,6 +222,7 @@ def process_request(ip, uri, method, headers, data, id):
         if not bool(ymatches):
             ymatches = None
         else:
+            tags['suspicious'] += 1
             malicious = True
 
 
@@ -227,13 +230,20 @@ def process_request(ip, uri, method, headers, data, id):
         clamav = cd.scan_stream(unpacked)
         if clamav:
             malicious = True
+            tags['malicious'] += 1
 
 
         #FIXME: add html/javascript analysis here
 
         #FIXME: add peepdf based analysis here
 
-        analysis_data = { 'id': id,  'malicious': malicious, 'filetype': filetype,'mimetype': mimetype, 'yara' : ymatches, 'clamav' : clamav, 'user-agent': user_agent, 'UA' : UA,  'host': headers['host'], 'uri' : uri, 'data' : data, 'status_code': resp.status_code, 'hash': hash , 'vt' : vt_report }
+
+
+        # Review tags before analysis
+        if tags['malicious'] == 0 and tags['suspicious'] == 0:
+            tags['clean'] = 1
+
+        analysis_data = { 'id': id, 'tags': tags, 'malicious': malicious, 'filetype': filetype,'mimetype': mimetype, 'yara' : ymatches, 'clamav' : clamav, 'user-agent': user_agent, 'UA' : UA,  'host': headers['host'], 'uri' : uri, 'data' : data, 'status_code': resp.status_code, 'hash': hash , 'vt' : vt_report }
 
         db.analysis.insert(analysis_data)
 
@@ -275,12 +285,12 @@ def view(hash):
 
     # FIXME: this map/reduce is executed each time view is requested
     map = Code("function () {"
-        "  emit({ hash : this['id'], UA : this.UA, 'user-agent' : this['user-agent']}, {malicious: this.malicious, UA: this.UA});"
+        "  emit({ hash : this['id'], UA : this.UA, 'user-agent' : this['user-agent']}, {malicious: this.tags.malicious, clean: this.tags.clean, suspicious:this.tags.suspicious});"
         "}")
 
     reduce = Code("function (key, vals) {"
-        "  var result = {malicious:0 };"
-        "  vals.forEach(function (value) {result.malicious += value.malicious;});"
+        "  var result = {malicious:0, suspicious:0, clean:0 };"
+        "  vals.forEach(function (value) {result.malicious += value.malicious; result.clean += value.clean; result.suspicious += value.suspicious; });"
         "  return result;"
         "}")
 
@@ -313,11 +323,18 @@ def list():
         h = { 'id' : pcap['id']}
         queries = db.analysis.find(h)
         details = []
+        tags = { 'malicious' : 0, 'suspicious': 0, 'clean': 0}
         for query in queries:
             print query
-            if query['malicious']:
-               malicious = True
-        analysis.append( {pcap['id'] : malicious})
+            if query['tags']['malicious']:
+               tags['malicious'] += 1
+            if query['tags']['suspicious']:
+               tags['suspicious'] += 1
+            if query['tags']['clean']:
+               tags['clean'] += 1
+
+
+        analysis.append( {pcap['id'] : tags})
     return render_template('list.html', analysis=analysis)
 
 
