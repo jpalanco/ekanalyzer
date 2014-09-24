@@ -47,7 +47,7 @@
         <td>Yara</td>
         <td>
             {% for y in request['yara'].main %}
-            {{y.rule}}<br />
+            <strong>{{y.rule}}</strong><br />
             {% endfor %}
         </td>
     </tr>
@@ -57,7 +57,7 @@
     {% if request['clamav'] %}
     <tr>    
         <td>ClamAV</td>
-        <td>{{request['clamav']}}</td>
+        <td><strong>{{request['clamav']}}</strong></td>
     </tr>
     {% endif %}    
 

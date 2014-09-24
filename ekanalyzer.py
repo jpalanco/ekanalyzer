@@ -256,6 +256,7 @@ def allowed_file(filename):
 @app.route('/upload-ek/', methods=['POST'])
 def upload_file():
     file = request.files['pcap']
+
     if file and allowed_file(file.filename):
  
         hash = hashlib.sha256()
@@ -270,6 +271,7 @@ def upload_file():
             hash_name = "%s" % (hash.hexdigest())
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], hash_name))
             return redirect(url_for('launch', hash=hash_name))
+
 
 @app.route('/launch/<hash>/')
 def launch(hash):
@@ -304,7 +306,12 @@ def view(hash):
         requests.append(i)
 
     original_request = db.requests.find_one({"id": hash})
-    original_ua = original_request['headers']['user-agent']
+
+
+    original_ua = ''
+
+    if original_request:
+        original_ua = original_request['headers']['user-agent']
 
 
     return render_template('view.html', requests=requests, original_ua=original_ua)
@@ -325,7 +332,7 @@ def list():
         details = []
         tags = { 'malicious' : 0, 'suspicious': 0, 'clean': 0}
         for query in queries:
-            print query
+            #print query
             if query['tags']['malicious']:
                tags['malicious'] += 1
             if query['tags']['suspicious']:
@@ -353,5 +360,6 @@ def index():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, host="0.0.0.0")
+
 
