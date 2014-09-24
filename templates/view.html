@@ -35,6 +35,8 @@
             <a href="{{ url_for('details', hash=request['_id']['hash'], ua=request['_id']['UA']) }}">View</a>
         </td>
         </tr>
+    {% else %}
+    <h2>No information available. Maybe the server is down.</h2>
     {% endfor %}
     </tbody>
 </table>
