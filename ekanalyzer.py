@@ -153,9 +153,13 @@ def process_request(ip, uri, method, headers, data, id):
         response = resp.content
 
         # FIXME: uris ending with / are not saved properly
-        if not os.path.isdir(fpath):        
-            with open(fpath, "w") as f:
-                f.write(response)
+        try:
+            if not os.path.isdir(fpath):        
+                with open(fpath, "w") as f:
+                    f.write(response)
+        #FIXME: manage files in GridFS
+        except IOError:
+            pass
 
 
 
@@ -243,6 +247,7 @@ def process_request(ip, uri, method, headers, data, id):
         if tags['malicious'] == 0 and tags['suspicious'] == 0:
             tags['clean'] = 1
 
+        # FIXME: remove 'malicious': malicious
         analysis_data = { 'id': id, 'tags': tags, 'malicious': malicious, 'filetype': filetype,'mimetype': mimetype, 'yara' : ymatches, 'clamav' : clamav, 'user-agent': user_agent, 'UA' : UA,  'host': headers['host'], 'uri' : uri, 'data' : data, 'status_code': resp.status_code, 'hash': hash , 'vt' : vt_report }
 
         db.analysis.insert(analysis_data)
