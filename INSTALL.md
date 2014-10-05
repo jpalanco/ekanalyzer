@@ -11,6 +11,12 @@ Install mongo, redis and clamav:
 sudo apt-get install mongodb redis-server clamav-daemon
 ~~~
 
+Download clamav signatures:
+
+~~~
+freshclam
+~~~
+
 Install yara
 
 ### Virtual enviroment
