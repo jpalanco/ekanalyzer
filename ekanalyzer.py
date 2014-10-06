@@ -76,7 +76,7 @@ def perform_results(hash):
                          'method' : http.method,
                          'data' : http.data,
                          'headers' : http.headers,
-                         'id': hash
+                         'hash': hash
                        }                      
                 db.requests.insert(data)                       
             #else:
@@ -94,14 +94,14 @@ def perform_results(hash):
         status = process_requests(hash)
 
 
-def process_requests(id):
-    request = { 'id' : id}
+def process_requests(hash):
+    request = { 'hash' : hash}
     result = db.requests.find(request)
     for r in result:
-        print process_request.delay(r['ip'], r['uri'], r['method'], r['headers'], r['data'], id)
+        print process_request.delay(r['ip'], r['uri'], r['method'], r['headers'], r['data'], hash)
 
 @celery.task
-def process_request(ip, uri, method, headers, data, id):
+def process_request(ip, uri, method, headers, data, pcaphash):
 
 
     user_agents = app.config['USER_AGENTS']
@@ -143,7 +143,7 @@ def process_request(ip, uri, method, headers, data, id):
         UA = m.hexdigest()
 
 
-        fpath = "workspace/" + id + "/" + UA + "/" + headers['host'] + uri
+        fpath = "workspace/" + pcaphash + "/" + UA + "/" + headers['host'] + uri
         dpath = os.path.dirname(fpath)
 
 
@@ -227,13 +227,11 @@ def process_request(ip, uri, method, headers, data, id):
             ymatches = None
         else:
             tags['suspicious'] += 1
-            malicious = True
 
 
         # ClamAV analysis
         clamav = cd.scan_stream(unpacked)
         if clamav:
-            malicious = True
             tags['malicious'] += 1
 
 
@@ -248,7 +246,7 @@ def process_request(ip, uri, method, headers, data, id):
             tags['clean'] = 1
 
         # FIXME: remove 'malicious': malicious
-        analysis_data = { 'id': id, 'tags': tags, 'malicious': malicious, 'filetype': filetype,'mimetype': mimetype, 'yara' : ymatches, 'clamav' : clamav, 'user-agent': user_agent, 'UA' : UA,  'host': headers['host'], 'uri' : uri, 'data' : data, 'status_code': resp.status_code, 'hash': hash , 'vt' : vt_report }
+        analysis_data = { 'hash': pcaphash, 'tags': tags, 'filetype': filetype,'mimetype': mimetype, 'yara' : ymatches, 'clamav' : clamav, 'user-agent': user_agent, 'UA' : UA,  'host': headers['host'], 'uri' : uri, 'data' : data, 'status_code': resp.status_code, 'content_hash': hash , 'vt' : vt_report }
 
         db.analysis.insert(analysis_data)
 
@@ -292,7 +290,7 @@ def view(hash):
 
     # FIXME: this map/reduce is executed each time view is requested
     map = Code("function () {"
-        "  emit({ hash : this['id'], UA : this.UA, 'user-agent' : this['user-agent']}, {malicious: this.tags.malicious, clean: this.tags.clean, suspicious:this.tags.suspicious});"
+        "  emit({ hash : this['hash'], UA : this.UA, 'user-agent' : this['user-agent']}, {malicious: this.tags.malicious, clean: this.tags.clean, suspicious:this.tags.suspicious});"
         "}")
 
     reduce = Code("function (key, vals) {"
@@ -310,7 +308,7 @@ def view(hash):
         #print i
         requests.append(i)
 
-    original_request = db.requests.find_one({"id": hash})
+    original_request = db.requests.find_one({"hash": hash})
 
 
     original_ua = ''
@@ -332,7 +330,7 @@ def list():
 
 
     for pcap in pcaps:
-        h = { 'id' : pcap['id']}
+        h = { 'hash' : pcap['id']}
         queries = db.analysis.find(h)
         details = []
         tags = { 'malicious' : 0, 'suspicious': 0, 'clean': 0}
@@ -352,7 +350,7 @@ def list():
 
 @app.route('/details/<hash>/<ua>/')
 def details(hash, ua):
-    user_agent = { 'UA' : ua, 'id' : hash}
+    user_agent = { 'UA' : ua, 'hash' : hash}
     requests = db.analysis.find(user_agent)    
 
     return render_template('details.html', requests=requests)
