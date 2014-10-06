@@ -28,6 +28,8 @@ import datetime
 
 from bson.objectid import ObjectId
 
+from zipfile import ZipFile
+
 # FIXME: move to config.py
 ALLOWED_EXTENSIONS = set(['pcap'])
 rules = yara.compile(filepath='yara/ekanalyzer.yar')
@@ -112,6 +114,11 @@ def process_requests(pcap_id):
         # Maybe hash is not necesary    
         print process_request.delay(r['ip'], r['uri'], r['method'], r['headers'], r['data'], r['hash'], r['pcap_id'])
 
+
+def extract_zip(input_zip):
+    input_zip=ZipFile(input_zip)
+    return {name: input_zip.read(name) for name in input_zip.namelist()}
+
 @celery.task
 def process_request(ip, uri, method, headers, data, pcap_hash, pcap_id):
 
@@ -155,7 +162,7 @@ def process_request(ip, uri, method, headers, data, pcap_hash, pcap_id):
         UA = m.hexdigest()
 
 
-        fpath = "workspace/" + pcap_hash + "/" + UA + "/" + headers['host'] + uri
+        fpath = "workspace/" + str(pcap_id) + "/" + UA + "/" + headers['host'] + uri
         dpath = os.path.dirname(fpath)
 
 
@@ -189,11 +196,12 @@ def process_request(ip, uri, method, headers, data, pcap_hash, pcap_id):
         vt_report = None
 
         tags = { 'clean' : 0, 'suspicious' : 0, 'malicious' : 0 }
+
         malicious = False        
 
         ymatches = None
 
-
+        unpacked = ''
         
         #
         # This function uses response (buffer) and fpath (path to file)
@@ -230,7 +238,14 @@ def process_request(ip, uri, method, headers, data, pcap_hash, pcap_id):
             decompressed = fpath + ".decompressed"
             with open(decompressed, "w") as f:
                 f.write(tmp)
-            unpacked =tmp
+            unpacked = tmp
+
+        elif mimetype == "application/zip":
+            extracted = extract_zip(fpath)
+
+            for name, content in extracted.iteritems():
+                unpacked += content 
+
         else:
             unpacked = response
 
