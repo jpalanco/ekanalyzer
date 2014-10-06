@@ -24,6 +24,10 @@ import zlib
 import yara
 import pyclamd
 
+import datetime
+
+from bson.objectid import ObjectId
+
 # FIXME: move to config.py
 ALLOWED_EXTENSIONS = set(['pcap'])
 rules = yara.compile(filepath='yara/ekanalyzer.yar')
@@ -47,20 +51,23 @@ celery = Celery('ekanalyzer', broker=app.config['BROKER_URL'] )
 
 
 @celery.task
-def perform_results(hash):
+def perform_results(pcap_id):
     try:
 
-        pcap = {'id' : hash}
+        pcap = {'_id' : ObjectId(pcap_id)}
 
-        result = db.pcap.find(pcap)
+        result = db.pcap.find_one(pcap)
 
-        if result.count() > 0:
-            return
-        else:
-            db.pcap.insert(pcap)
+        #if result.count() > 0:
+        #    return
+        #else:
+        #    db.pcap.insert(pcap)
+
+        pcap_hash = result['id']
 
 
-        f = open(app.config['UPLOAD_FOLDER'] + hash, "rb")
+        f = open(app.config['UPLOAD_FOLDER'] + pcap_hash, "rb")
+
         pcap = dpkt.pcap.Reader(f)
         for ts, buf in pcap:
             eth = dpkt.ethernet.Ethernet(buf)
@@ -76,7 +83,8 @@ def perform_results(hash):
                          'method' : http.method,
                          'data' : http.data,
                          'headers' : http.headers,
-                         'hash': hash
+                         'hash': pcap_hash,
+                         'pcap_id' : ObjectId(pcap_id)
                        }                      
                 db.requests.insert(data)                       
             #else:
@@ -90,18 +98,22 @@ def perform_results(hash):
         print e
     except :
         print "Unexpected error:", sys.exc_info()
+        print pcap_hash
     finally:
-        status = process_requests(hash)
+        status = process_requests(pcap_id)
 
 
-def process_requests(hash):
-    request = { 'hash' : hash}
+def process_requests(pcap_id):
+
+    request = { 'pcap_id' : ObjectId(pcap_id)}
+
     result = db.requests.find(request)
     for r in result:
-        print process_request.delay(r['ip'], r['uri'], r['method'], r['headers'], r['data'], hash)
+        # Maybe hash is not necesary    
+        print process_request.delay(r['ip'], r['uri'], r['method'], r['headers'], r['data'], r['hash'], r['pcap_id'])
 
 @celery.task
-def process_request(ip, uri, method, headers, data, pcaphash):
+def process_request(ip, uri, method, headers, data, pcap_hash, pcap_id):
 
 
     user_agents = app.config['USER_AGENTS']
@@ -143,7 +155,7 @@ def process_request(ip, uri, method, headers, data, pcaphash):
         UA = m.hexdigest()
 
 
-        fpath = "workspace/" + pcaphash + "/" + UA + "/" + headers['host'] + uri
+        fpath = "workspace/" + pcap_hash + "/" + UA + "/" + headers['host'] + uri
         dpath = os.path.dirname(fpath)
 
 
@@ -246,7 +258,24 @@ def process_request(ip, uri, method, headers, data, pcaphash):
             tags['clean'] = 1
 
         # FIXME: remove 'malicious': malicious
-        analysis_data = { 'hash': pcaphash, 'tags': tags, 'filetype': filetype,'mimetype': mimetype, 'yara' : ymatches, 'clamav' : clamav, 'user-agent': user_agent, 'UA' : UA,  'host': headers['host'], 'uri' : uri, 'data' : data, 'status_code': resp.status_code, 'content_hash': hash , 'vt' : vt_report }
+        # FIXME: maybe hash is not necesary
+        analysis_data = {   'pcap_id' : ObjectId(pcap_id),
+                            'hash': pcap_hash, 
+                            'tags': tags, 
+                            'filetype': filetype,
+                            'mimetype': mimetype, 
+                            'yara' : ymatches, 
+                            'clamav' : clamav, 
+                            'user-agent': user_agent, 
+                            'UA' : UA,  
+                            'host': headers['host'], 
+                            'uri' : uri, 
+                            'data' : data, 
+                            'status_code': resp.status_code, 
+                            'content_hash': hash, 
+                            'vt' : vt_report,
+                            'date' : datetime.datetime.utcnow() 
+                        }
 
         db.analysis.insert(analysis_data)
 
@@ -273,24 +302,29 @@ def upload_file():
             file.seek(0)
             hash_name = "%s" % (hash.hexdigest())
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], hash_name))
-            return redirect(url_for('launch', hash=hash_name))
+
+            pcap = {'id' : hash_name}
+            pcap_id = db.pcap.insert(pcap)
+
+            return redirect(url_for('launch', pcap_id=pcap_id))
 
 
-@app.route('/launch/<hash>/')
-def launch(hash):
-    perform_results.delay(hash)
-    return render_template('launch.html', hash=hash)
+@app.route('/launch/<pcap_id>/')
+def launch(pcap_id):
 
-@app.route('/view/<hash>/')
-def view(hash):
+    perform_results.delay(pcap_id)
+    return render_template('launch.html', pcap_id=pcap_id)
 
-    h = { "_id.hash" : hash }
+@app.route('/view/<pcap_id>/')
+def view(pcap_id):
 
-    #requests = db.analysis.find(h)    
+
+    pid = { "_id.pcap_id" : ObjectId(pcap_id) }
+
 
     # FIXME: this map/reduce is executed each time view is requested
     map = Code("function () {"
-        "  emit({ hash : this['hash'], UA : this.UA, 'user-agent' : this['user-agent']}, {malicious: this.tags.malicious, clean: this.tags.clean, suspicious:this.tags.suspicious});"
+        "  emit({ pcap_id : this['pcap_id'], UA : this.UA, 'user-agent' : this['user-agent']}, {malicious: this.tags.malicious, clean: this.tags.clean, suspicious:this.tags.suspicious});"
         "}")
 
     reduce = Code("function (key, vals) {"
@@ -301,14 +335,14 @@ def view(hash):
 
     results = db.analysis.map_reduce(map, reduce, 'malicious')
 
-    found = results.find(h)
+    found = results.find(pid)
     requests = []
 
     for i in found:
         #print i
         requests.append(i)
 
-    original_request = db.requests.find_one({"hash": hash})
+    original_request = db.requests.find_one({"pcap_id": ObjectId(pcap_id)})
 
 
     original_ua = ''
@@ -330,12 +364,12 @@ def list():
 
 
     for pcap in pcaps:
-        h = { 'hash' : pcap['id']}
+        h = { 'pcap_id' :  ObjectId(pcap['_id'])}
         queries = db.analysis.find(h)
         details = []
         tags = { 'malicious' : 0, 'suspicious': 0, 'clean': 0}
+    
         for query in queries:
-            #print query
             if query['tags']['malicious']:
                tags['malicious'] += 1
             if query['tags']['suspicious']:
@@ -344,13 +378,13 @@ def list():
                tags['clean'] += 1
 
 
-        analysis.append( {pcap['id'] : tags})
+        analysis.append( {pcap['_id'] : tags})
     return render_template('list.html', analysis=analysis)
 
 
-@app.route('/details/<hash>/<ua>/')
-def details(hash, ua):
-    user_agent = { 'UA' : ua, 'hash' : hash}
+@app.route('/details/<pcap_id>/<ua>/')
+def details(pcap_id, ua):
+    user_agent = { 'UA' : ua, 'pcap_id' : ObjectId(pcap_id)}
     requests = db.analysis.find(user_agent)    
 
     return render_template('details.html', requests=requests)

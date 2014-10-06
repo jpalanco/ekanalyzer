@@ -33,7 +33,7 @@
 
         </td>
         <td>
-            <a href="{{ url_for('details', hash=request['_id']['hash'], ua=request['_id']['UA']) }}">View</a>
+            <a href="{{ url_for('details', pcap_id=request['_id']['pcap_id'], ua=request['_id']['UA']) }}">View</a>
         </td>
         </tr>
     {% else %}

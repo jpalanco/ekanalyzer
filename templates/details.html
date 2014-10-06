@@ -42,6 +42,18 @@
         <td>{{request['mimetype']}}</td>
     </tr>
 
+    <tr>    
+        <td>sha256</td>
+        <td>{{request['content_hash']}}</td>
+    </tr>
+
+
+    <tr>    
+        <td>Date</td>
+        <td>{{request['date']}}</td>
+    </tr>
+
+
     {% if request['yara'] %}
     <tr>    
         <td>Yara</td>
