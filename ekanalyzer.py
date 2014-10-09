@@ -205,7 +205,7 @@ def process_request(ip, uri, method, headers, data, pcap_hash, pcap_id):
         
         #
         # This function uses response (buffer) and fpath (path to file)
-        # FIX this as soon as the "/" bug be fixed
+        # FIX this as soon as the "/" bug be fixed (gridfs)
         #
 
 
@@ -228,6 +228,7 @@ def process_request(ip, uri, method, headers, data, pcap_hash, pcap_id):
                 #print "Unexpected error:", sys.exc_info()
                 vt_report = None
 
+        # FIXME: check VT after unpack/decompress
         # Prepare for YARA        
         # FIXME: ZWS http://malware-traffic-analysis.net/2014/09/23/index.html
         if mimetype == "application/x-shockwave-flash" and filetype.find("CWS"):
@@ -362,9 +363,11 @@ def view(pcap_id):
 
     original_ua = ''
 
-    if original_request:
-        original_ua = original_request['headers']['user-agent']
-
+    try:
+        if original_request:
+            original_ua = original_request['headers']['user-agent']
+    except KeyError:
+        pass
 
     return render_template('view.html', requests=requests, original_ua=original_ua)
 
