@@ -141,6 +141,11 @@ rule DecodedGenericCLSID : decodedOnly
 		impact = 0
 	strings:
 		$gen = /[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/ nocase
+		$a = "02d55ba8-adf8-4a31-a685-f2f8e1e9e63d" nocase
+		$b = "9af45c85-b20b-4f64-8ecb-78eafca2fc53"	nocase	
+		$c = "56bfcce4-6106-4bb0-be9c-12181cab7f4b" nocase
+		$d = "e61eea32-6d31-4dc4-9842-b7f83d9edb5f" nocase		
+		$e = "D27CDB6E-AE6D-11cf-96B8-444553540000" nocase		
 	condition:
 		1 of them
 }
