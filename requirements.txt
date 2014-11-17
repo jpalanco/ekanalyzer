@@ -6,7 +6,6 @@ amqp==1.4.6
 anyjson==0.3.3
 billiard==3.3.0.18
 celery==3.1.15
-dpkt==1.8
 itsdangerous==0.24
 kombu==3.0.23
 pyClamd==0.3.10

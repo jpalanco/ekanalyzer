@@ -31,6 +31,23 @@ pip install -r requirements.txt
 mkdir uploads
 ~~~
 
+### Install dpkt (in your virtualenv)
+
+wget http://dpkt.googlecode.com/files/dpkt-1.8.tar.gz
+tar xvfz dpkt-1.8.tar.gz
+cd dpkt
+python setup.py install
+
+
+### Recomended: Patch dpkt
+
+The patch is available at patches/ directory
+cd venv/local/lib/python2.7/site-packages/dpkt
+patch -p1 < /tmp/ekanalyzer/patches/dpkt.patch 
+
+
+
+
 Edit the config.py file and introduce your Virus Total API Key
 
 

@@ -14,6 +14,7 @@
 //}
 
 
+/*
 rule BasicObfuscatedJavaSriptInjection
 {
 	meta:
@@ -36,7 +37,7 @@ rule specific_directory_Path_traversal
 	condition:
 		$e
 }
-
+*/
 
 /*rule possible_includes_base64_packed_functions 
 {
@@ -78,7 +79,7 @@ rule jsDOM_properties_methods
 		$i = /(?:data:(?:.)*,)|(?:\w+\s*=\W*(?!https?)\w+:)|(jar:\w+:)/ nocase
 	condition:
 		$i
-}*/
+}
 
 
 rule null_bytes_HTTP_splitting
@@ -120,7 +121,6 @@ rule perl_shellcode_injection_LDAP_Vector
 		$l
 }
 
-
 rule Attribute_breaking_or_obfuscated
 {
 	meta:
@@ -135,7 +135,7 @@ rule Attribute_breaking_or_obfuscated
 	condition:
 		$m and $n and $o
 }
-
+*/
 
 rule ObfuscationPattern_javaScript
 { 
