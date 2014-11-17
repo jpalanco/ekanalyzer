@@ -1,0 +1,32 @@
+diff -Nur dpkt/http.py dpkt-patch/http.py
+--- dpkt/http.py	2014-11-17 17:41:59.406706107 +0100
++++ dpkt-patch/http.py	2014-11-17 17:43:08.378704782 +0100
+@@ -11,7 +11,8 @@
+     while 1:
+         line = f.readline()
+         if not line:
+-            raise dpkt.NeedData('premature end of headers')
++            #raise dpkt.NeedData('premature end of headers')
++            continue
+         line = line.strip()
+         if not line:
+             break
+@@ -49,13 +50,15 @@
+             else:
+                 break
+         if not found_end:
+-            raise dpkt.NeedData('premature end of chunked body')
++            #raise dpkt.NeedData('premature end of chunked body')
++            pass
+         body = ''.join(l)
+     elif 'content-length' in headers:
+         n = int(headers['content-length'])
+         body = f.read(n)
+         if len(body) != n:
+-            raise dpkt.NeedData('short body (missing %d bytes)' % (n - len(body)))
++            #raise dpkt.NeedData('short body (missing %d bytes)' % (n - len(body)))
++            pass
+     elif 'content-type' in headers:
+         body = f.read()
+     else:
+Binary files dpkt/http.pyc and dpkt-patch/http.pyc differ
