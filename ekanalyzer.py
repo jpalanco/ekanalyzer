@@ -29,6 +29,8 @@ import datetime
 from bson.objectid import ObjectId
 
 from zipfile import ZipFile
+import redis
+import json
 
 # FIXME: move to config.py
 ALLOWED_EXTENSIONS = set(['pcap'])
@@ -45,6 +47,8 @@ app.config.from_pyfile('config.py')
 
 connection = Connection(app.config['MONGODB_SERVER'] , app.config['MONGODB_PORT'])
 db = connection.ekanalyzer
+
+memcache = redis.Redis('localhost')
 
 
 app.debug = True
@@ -75,6 +79,8 @@ def perform_results(pcap_id):
             eth = dpkt.ethernet.Ethernet(buf)
             ip = eth.data
             tcp = ip.data
+            if type(tcp) is str:
+              continue
             # FIXME: assuming only http traffic on port 80
             if tcp.dport == 80 and len(tcp.data) > 0:
                 http = dpkt.http.Request(tcp.data)
@@ -92,6 +98,7 @@ def perform_results(pcap_id):
             #else:
             #    print "Port is " + str(tcp.dport)
 
+    
     except dpkt.NeedData as e:
         print e
     except AttributeError as e:
@@ -207,55 +214,70 @@ def process_request(ip, uri, method, headers, data, pcap_hash, pcap_id):
         # This function uses response (buffer) and fpath (path to file)
         # FIX this as soon as the "/" bug be fixed (gridfs)
         #
+        try:
+	  vt_report_raw = memcache.get(hash)
+          vt_report = json.loads(vt_report_raw)
+        except:
+          print "No se puede cargar report" 
+          vt_report = None
+
+        if vt_report == None: 
+
+          # Send to VT
+          if mimetype == "application/octet-stream" \
+              or mimetype == "application/java-archive" \
+              or mimetype == "application/zip" \
+              or mimetype == "'application/pdf'" \
+              or mimetype == "application/x-shockwave-flash":
+
+              # FIME: cache for repeated analysis
+              parameters = {"resource": hash, "apikey": app.config["VIRUSTOTAL_API_KEY"]}
+              r = requests.post('https://www.virustotal.com/vtapi/v2/file/report', params=parameters)
+              try:
+                  print r.text
+                  vt_report = r.json()
+                  memcache.set(hash,r.text)
+              except:
+                  print "Problema grave guardando report"
+                  print "Unexpected error:", sys.exc_info()
 
 
-        # Send to VT
-        if mimetype == "application/octet-stream" \
-            or mimetype == "application/java-archive" \
-            or mimetype == "application/zip" \
-            or mimetype == "'application/pdf'" \
-            or mimetype == "application/x-shockwave-flash":
+        if vt_report != None:
+          if vt_report['positives'] > 0:  
+            tags['malicious'] += 1
+            malicious = True
 
-            # FIME: cache for repeated analysis
-            parameters = {"resource": hash, "apikey": app.config["VIRUSTOTAL_API_KEY"]}
-            r = requests.post('https://www.virustotal.com/vtapi/v2/file/report', params=parameters)
-            try:
-                vt_report = r.json()
-                if vt_report['positives'] > 0:
-                    tags['malicious'] += 1
-                    malicious = True
-            except:
-                #print "Unexpected error:", sys.exc_info()
-                vt_report = None
 
         # FIXME: check VT after unpack/decompress
         # Prepare for YARA        
         # FIXME: ZWS http://malware-traffic-analysis.net/2014/09/23/index.html
-        if mimetype == "application/x-shockwave-flash" and filetype.find("CWS"):
-            #print "compressed SWF detected"
-            f = open(fpath, "rb")
-            f.read(3) # skip 3 bytes
-            tmp = 'FWS' + f.read(5) + zlib.decompress(f.read())
-            decompressed = fpath + ".decompressed"
-            with open(decompressed, "w") as f:
-                f.write(tmp)
-            unpacked = tmp
+        try:
+          if mimetype == "application/x-shockwave-flash" and filetype.find("CWS"):
+              #print "compressed SWF detected"
+              f = open(fpath, "rb")
+              f.read(3) # skip 3 bytes
+              tmp = 'FWS' + f.read(5) + zlib.decompress(f.read())
+              decompressed = fpath + ".decompressed"
+              with open(decompressed, "w") as f:
+                  f.write(tmp)
+              unpacked = tmp
 
-        elif mimetype == "application/zip":
-            extracted = extract_zip(fpath)
+          elif mimetype == "application/zip":
+              extracted = extract_zip(fpath)
 
-            for name, content in extracted.iteritems():
-                unpacked += content 
+              for name, content in extracted.iteritems():
+                  unpacked += content 
 
-        else:
-            unpacked = response
+          else:
+              unpacked = response
 
-        ymatches = rules.match(data=unpacked)
-        if not bool(ymatches):
-            ymatches = None
-        else:
-            tags['suspicious'] += 1
-
+          ymatches = rules.match(data=unpacked)
+          if not bool(ymatches):
+              ymatches = None
+          else:
+              tags['suspicious'] += 1
+        except:
+          print "Unexpected error:", sys.exc_info()
 
         # ClamAV analysis
         clamav = cd.scan_stream(unpacked)
