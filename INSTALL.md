@@ -8,7 +8,7 @@ Install
 Install mongo, redis and clamav:
 
 ~~~
-sudo apt-get install mongodb redis-server clamav-daemon python-pip build-essential dh-autoreconf python-dev
+sudo apt-get install mongodb redis-server clamav-daemon python-pip build-essential dh-autoreconf python-dev patch
 ~~~
 
 Download clamav signatures:
