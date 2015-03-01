@@ -33,10 +33,12 @@ mkdir uploads
 
 ### Install dpkt (in your virtualenv)
 
+~~~
 wget http://dpkt.googlecode.com/files/dpkt-1.8.tar.gz
 tar xvfz dpkt-1.8.tar.gz
 cd dpkt
 python setup.py install
+~~~
 
 
 ### Recomended: Patch dpkt
