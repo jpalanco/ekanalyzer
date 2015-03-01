@@ -137,18 +137,22 @@ def check_vt(hash, mimetype):
 
         try:
           vt_report_raw = memcache.get(hash)
+          print "report  = " + vt_report_raw
           vt_report = json.loads(vt_report_raw)
-        except:
-          print "The report cannot be loaded" 
+          print "vtreport  = " + vt_report
+        except Exception, e:
+          print "The report cannot be loaded for %s: %s" % (hash,  e) 
           vt_report = None
 
         if vt_report == None: 
+          print "Iniciamos comunicacion con vt: " + mimetype
 
           # Send to VT
           if mimetype == "application/octet-stream" \
               or mimetype == "application/java-archive" \
               or mimetype == "application/zip" \
-              or mimetype == "'application/pdf'" \
+              or mimetype == "application/pdf" \
+              or mimetype == "text/html" \
               or mimetype == "application/x-shockwave-flash":
 
               parameters = {"resource": hash, "apikey": app.config["VIRUSTOTAL_API_KEY"]}
@@ -165,7 +169,6 @@ def check_vt(hash, mimetype):
 
 
               r = requests.post('https://www.virustotal.com/vtapi/v2/file/report', params=parameters)
-
               memcache.set("last_vt_call",datetime.datetime.utcnow() )
 
 
