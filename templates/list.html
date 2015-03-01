@@ -29,11 +29,13 @@
             <tr>
                 <td>{{key}}</td>
                 <td>
-                   
-                {% if result.malicious > 0 %}
+                {% if result.running == 1 %}
+                   Running
+                {% else %}
+                  {% if result.malicious > 0 %}
                     Malicious<br />
 
-                {% else %}
+                  {% else %}
 
                     {% if result.suspicious > 0  %}
                         Suspicious
@@ -45,8 +47,8 @@
 
                     {% endif %}                
 
+                  {% endif %}
                 {% endif %}
-
 
 
                 </td>

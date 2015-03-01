@@ -453,7 +453,12 @@ def list():
         h = { 'pcap_id' :  ObjectId(pcap['_id'])}
         queries = db.analysis.find(h)
         details = []
-        tags = { 'malicious' : 0, 'suspicious': 0, 'clean': 0}
+        tags = { 'malicious' : 0, 'suspicious': 0, 'clean': 0, 'running' : 0}
+        pending = memcache.get(str(pcap['_id']) + "_tasks")
+        pending = int(pending) 
+        if(pending > 0):
+          tags['running']= 1 
+          print "Pending vale " + str(pending)
     
         for query in queries:
             if query['tags']['malicious']:
