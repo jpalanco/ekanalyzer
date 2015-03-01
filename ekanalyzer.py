@@ -123,6 +123,7 @@ def process_requests(pcap_id):
     nrequests*=uas
     nrequests+=1
     memcache.set(str(pcap_id) + "_tasks", str(nrequests))
+    memcache.set(str(pcap_id) + "_total_tasks", str(nrequests))
 
     print "added %s tasks" % str(nrequests)
 
@@ -394,9 +395,13 @@ def view(pcap_id):
 
 
     pending_tasks = memcache.get(str(pcap_id) + "_tasks")
+    total_tasks = memcache.get(str(pcap_id) + "_total_tasks")
 
     if pending_tasks != None:
       print "There are %s pending tasks" % pending_tasks
+    
+    if total_tasks != None:
+      print "There are %s tasks" % total_tasks
 
     pid = { "_id.pcap_id" : ObjectId(pcap_id) }
 
@@ -432,7 +437,7 @@ def view(pcap_id):
     except KeyError:
         pass
 
-    return render_template('view.html', requests=requests, original_ua=original_ua)
+    return render_template('view.html', requests=requests, original_ua=original_ua, pending_tasks=int(pending_tasks), total_tasks=int(total_tasks))
 
 @app.route('/list')
 def list():

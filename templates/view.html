@@ -8,6 +8,17 @@
 {% block content %}
 <h1>Overview</h1>
 
+
+
+{% if pending_tasks > 0 %}
+<h2>This analysis is running</h2><br /> 
+<META HTTP-EQUIV="refresh" CONTENT="5">
+Total Tasks:{{total_tasks}}<br />
+Pending Tasks:{{pending_tasks}}
+{% else %}
+The analysis has finished properly.
+{% endif %}
+
 <table class="pure-table">
     <thead>
         <tr>
@@ -37,7 +48,15 @@
         </td>
         </tr>
     {% else %}
-    <h2>No information available. Maybe the server is down or pcap file is corrupt.</h2>
+      <h2>
+      No information available.
+
+      {% if pending_tasks < 1 %}
+        Maybe the server is down.
+      {% endif %}
+
+      </h2>
+
     {% endfor %}
     </tbody>
 </table>
