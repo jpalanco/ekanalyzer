@@ -25,6 +25,7 @@ import yara
 import pyclamd
 
 import datetime
+from time import sleep
 
 from bson.objectid import ObjectId
 
@@ -126,6 +127,58 @@ def extract_zip(input_zip):
     input_zip=ZipFile(input_zip)
     return {name: input_zip.read(name) for name in input_zip.namelist()}
 
+def check_vt(hash, mimetype):
+        #
+        # This function uses response (buffer) and fpath (path to file)
+        # FIX this as soon as the "/" bug be fixed (gridfs)
+        #
+
+        vt_report = None
+
+        try:
+          vt_report_raw = memcache.get(hash)
+          vt_report = json.loads(vt_report_raw)
+        except:
+          print "The report cannot be loaded" 
+          vt_report = None
+
+        if vt_report == None: 
+
+          # Send to VT
+          if mimetype == "application/octet-stream" \
+              or mimetype == "application/java-archive" \
+              or mimetype == "application/zip" \
+              or mimetype == "'application/pdf'" \
+              or mimetype == "application/x-shockwave-flash":
+
+              parameters = {"resource": hash, "apikey": app.config["VIRUSTOTAL_API_KEY"]}
+
+              last_call_cache  = memcache.get("last_vt_call") 
+
+              if last_call_cache != None:
+                last_call = datetime.datetime.strptime(last_call_cache,"%Y-%m-%d %H:%M:%S.%f")
+                now = datetime.datetime.utcnow() 
+                delta = now - last_call
+                sleep_seconds  = 15 - delta.total_seconds()
+                if sleep_seconds > 0:
+                  sleep(sleep_seconds)
+
+
+              r = requests.post('https://www.virustotal.com/vtapi/v2/file/report', params=parameters)
+
+              memcache.set("last_vt_call",datetime.datetime.utcnow() )
+
+
+              try:
+                  print r.text
+                  vt_report = r.json()
+                  memcache.set(hash,r.text)
+              except:
+                  print "Problem saving the report"
+                  print "Unexpected error:", sys.exc_info()
+        return vt_report
+
+
 @celery.task
 def process_request(ip, uri, method, headers, data, pcap_hash, pcap_id):
 
@@ -200,7 +253,7 @@ def process_request(ip, uri, method, headers, data, pcap_hash, pcap_id):
         mimetype = magic.from_buffer(response, mime=True)
 
 
-        vt_report = None
+        
 
         tags = { 'clean' : 0, 'suspicious' : 0, 'malicious' : 0 }
 
@@ -210,37 +263,7 @@ def process_request(ip, uri, method, headers, data, pcap_hash, pcap_id):
 
         unpacked = ''
         
-        #
-        # This function uses response (buffer) and fpath (path to file)
-        # FIX this as soon as the "/" bug be fixed (gridfs)
-        #
-        try:
-	  vt_report_raw = memcache.get(hash)
-          vt_report = json.loads(vt_report_raw)
-        except:
-          print "No se puede cargar report" 
-          vt_report = None
-
-        if vt_report == None: 
-
-          # Send to VT
-          if mimetype == "application/octet-stream" \
-              or mimetype == "application/java-archive" \
-              or mimetype == "application/zip" \
-              or mimetype == "'application/pdf'" \
-              or mimetype == "application/x-shockwave-flash":
-
-              # FIME: cache for repeated analysis
-              parameters = {"resource": hash, "apikey": app.config["VIRUSTOTAL_API_KEY"]}
-              r = requests.post('https://www.virustotal.com/vtapi/v2/file/report', params=parameters)
-              try:
-                  print r.text
-                  vt_report = r.json()
-                  memcache.set(hash,r.text)
-              except:
-                  print "Problema grave guardando report"
-                  print "Unexpected error:", sys.exc_info()
-
+        vt_report = check_vt(hash, mimetype)
 
         if vt_report != None:
           if vt_report['positives'] > 0:  
