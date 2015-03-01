@@ -118,9 +118,18 @@ def process_requests(pcap_id):
     request = { 'pcap_id' : ObjectId(pcap_id)}
 
     result = db.requests.find(request)
+    nrequests = result.count()
+    uas = len(app.config['USER_AGENTS'])
+    nrequests*=uas
+    nrequests+=1
+    memcache.set(str(pcap_id) + "_tasks", str(nrequests))
+
+    print "added %s tasks" % str(nrequests)
+
     for r in result:
         # Maybe hash is not necesary    
         print process_request.delay(r['ip'], r['uri'], r['method'], r['headers'], r['data'], r['hash'], r['pcap_id'])
+
 
 
 def extract_zip(input_zip):
@@ -141,11 +150,10 @@ def check_vt(hash, mimetype):
           vt_report = json.loads(vt_report_raw)
           print "vtreport  = " + vt_report
         except Exception, e:
-          print "The report cannot be loaded for %s: %s" % (hash,  e) 
+          print "The report cannot be loaded for %s" % hash
           vt_report = None
 
         if vt_report == None: 
-          print "Iniciamos comunicacion con vt: " + mimetype
 
           # Send to VT
           if mimetype == "application/octet-stream" \
@@ -342,7 +350,9 @@ def process_request(ip, uri, method, headers, data, pcap_hash, pcap_id):
                         }
 
         db.analysis.insert(analysis_data)
-
+        pending_tasks = memcache.get(str(pcap_id) + "_tasks")
+        remaining_tasks = int(pending_tasks) - 1
+        memcache.set(str(pcap_id) + "_tasks", remaining_tasks )
 
 
 def allowed_file(filename):
@@ -382,6 +392,11 @@ def launch(pcap_id):
 @app.route('/view/<pcap_id>/')
 def view(pcap_id):
 
+
+    pending_tasks = memcache.get(str(pcap_id) + "_tasks")
+
+    if pending_tasks != None:
+      print "There are %s pending tasks" % pending_tasks
 
     pid = { "_id.pcap_id" : ObjectId(pcap_id) }
 
