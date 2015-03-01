@@ -147,11 +147,9 @@ def check_vt(hash, mimetype):
 
         try:
           vt_report_raw = memcache.get(hash)
-          print "report  = " + vt_report_raw
           vt_report = json.loads(vt_report_raw)
-          print "vtreport  = " + vt_report
-        except Exception, e:
-          print "The report cannot be loaded for %s" % hash
+        except Exception as e:
+          print "The report cannot be loaded for %s: %s" % (hash, e)
           vt_report = None
 
         if vt_report == None: 
