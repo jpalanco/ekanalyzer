@@ -8,16 +8,15 @@ Install
 Install mongo, redis and clamav:
 
 ~~~
-sudo apt-get install mongodb redis-server clamav-daemon
+sudo apt-get install mongodb redis-server clamav-daemon python-pip build-essential dh-autoreconf python-dev
 ~~~
 
 Download clamav signatures:
 
 ~~~
-freshclam
+sudo freshclam
 ~~~
 
-Install yara
 
 ### Virtual enviroment
 
@@ -31,12 +30,27 @@ pip install -r requirements.txt
 mkdir uploads
 ~~~
 
+### Install yara (in your virtualenv)
+
+~~~
+cd /tmp
+wget https://github.com/plusvic/yara/archive/v3.3.0.tar.gz
+tar xvfz  v3.3.0.tar.gz
+cd yara-3.3.0
+./bootstrap.sh
+./configure
+sudo make install
+cd yara-python
+python setup.py install
+~~~
+
 ### Install dpkt (in your virtualenv)
 
 ~~~
+cd /tmp
 wget http://dpkt.googlecode.com/files/dpkt-1.8.tar.gz
 tar xvfz dpkt-1.8.tar.gz
-cd dpkt
+cd dpkt-1.8
 python setup.py install
 ~~~
 
