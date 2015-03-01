@@ -57,7 +57,7 @@ Celery (Terminal 1)
 
 ~~~
 cd ekanalyzer
-source env/bin/activate
+source venv/bin/activate
 celery -A ekanalyzer:celery worker -l DEBUG
 ~~~
 
@@ -66,7 +66,7 @@ App (Terminal 2)
 
 ~~~
 cd ekanalyzer
-source env/bin/activate
+source venv/bin/activate
 python ekanalyzer.py 
 ~~~
 
