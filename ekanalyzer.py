@@ -145,6 +145,11 @@ def check_vt(hash, mimetype):
 
         vt_report = None
 
+
+        # Empty file
+        if hash == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855":
+          return vt_report
+
         try:
           vt_report_raw = memcache.get(hash)
           vt_report = json.loads(vt_report_raw)
@@ -193,6 +198,7 @@ def check_vt(hash, mimetype):
 def process_request(ip, uri, method, headers, data, pcap_hash, pcap_id):
 
 
+
     user_agents = app.config['USER_AGENTS']
 
     # FIXME: check case
@@ -221,10 +227,22 @@ def process_request(ip, uri, method, headers, data, pcap_hash, pcap_id):
         )
         prepped = req.prepare()
 
-
-        resp = s.send(prepped, 
-            #proxies=proxies
-        )
+        try:
+          resp = s.send(prepped, 
+              timeout=3,
+              allow_redirects=False,
+              #proxies=proxies
+          )
+        except requests.ConnectionError:
+          pending_tasks = memcache.get(str(pcap_id) + "_tasks")
+          remaining_tasks = int(pending_tasks) - 1
+          memcache.set(str(pcap_id) + "_tasks", remaining_tasks )
+          continue
+        except requests.exceptions.ReadTimeout:
+          pending_tasks = memcache.get(str(pcap_id) + "_tasks")
+          remaining_tasks = int(pending_tasks) - 1
+          memcache.set(str(pcap_id) + "_tasks", remaining_tasks )
+          continue
 
         #user agent hash
         m = hashlib.md5()
@@ -276,10 +294,12 @@ def process_request(ip, uri, method, headers, data, pcap_hash, pcap_id):
         vt_report = check_vt(hash, mimetype)
 
         if vt_report != None:
-          if vt_report['positives'] > 0:  
-            tags['malicious'] += 1
-            malicious = True
-
+          try:
+            if vt_report['positives'] > 0:  
+              tags['malicious'] += 1
+              malicious = True
+          except KeyError:
+            pass
 
         # FIXME: check VT after unpack/decompress
         # Prepare for YARA        
