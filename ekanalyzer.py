@@ -94,7 +94,9 @@ def perform_results(pcap_id):
                          'data' : http.data,
                          'headers' : http.headers,
                          'hash': pcap_hash,
-                         'pcap_id' : ObjectId(pcap_id)
+                         'pcap_id' : ObjectId(pcap_id),
+                         'date' : datetime.datetime.utcnow()
+
                        }                      
                 db.requests.insert(data)                       
             #else:
@@ -397,7 +399,7 @@ def upload_file():
             hash_name = "%s" % (hash.hexdigest())
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], hash_name))
 
-            pcap = {'id' : hash_name}
+            pcap = {'id' : hash_name, 'date' : datetime.datetime.utcnow()}
             pcap_id = db.pcap.insert(pcap)
 
             return redirect(url_for('launch', pcap_id=pcap_id))
@@ -477,7 +479,6 @@ def list():
         pending = int(pending) 
         if(pending > 0):
           tags['running']= 1 
-          print "Pending vale " + str(pending)
     
         for query in queries:
             if query['tags']['malicious']:
@@ -488,7 +489,7 @@ def list():
                tags['clean'] += 1
 
 
-        analysis.append( {pcap['_id'] : tags})
+        analysis.append( {pcap['_id'] : { 'tags' : tags, 'date_performed' : pcap['date']}  })
     return render_template('list.html', analysis=analysis)
 
 

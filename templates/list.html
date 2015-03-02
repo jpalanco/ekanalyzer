@@ -17,6 +17,7 @@
     <thead>
         <tr>
             <th>ID</th>
+            <th>Date</th>
             <th>Result</th>
             <th>View</th>
         </tr>
@@ -28,20 +29,21 @@
      
             <tr>
                 <td>{{key}}</td>
+                <td>{{result.date_performed}}</td>
                 <td>
-                {% if result.running == 1 %}
+                {% if result.tags.running == 1 %}
                    Running
                 {% else %}
-                  {% if result.malicious > 0 %}
+                  {% if result.tags.malicious > 0 %}
                     Malicious<br />
 
                   {% else %}
 
-                    {% if result.suspicious > 0  %}
+                    {% if result.tags.suspicious > 0  %}
                         Suspicious
                     {% else %}
 
-                        {% if result.clean > 0 %}
+                        {% if result.tags.clean > 0 %}
                             Clean
                         {% endif %}
 
