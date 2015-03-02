@@ -5,7 +5,8 @@ from flask import request, redirect, url_for
 from werkzeug import secure_filename
 import hashlib
 
-from pymongo import Connection
+#from pymongo import Connection
+from pymongo import * 
 from bson.code import Code
 
 import dpkt
@@ -460,7 +461,7 @@ def view(pcap_id):
 @app.route('/list')
 def list():
 
-    pcaps = db.pcap.find()
+    pcaps = db.pcap.find().sort( [('_id', DESCENDING)] )
 
     analysis = []
 
