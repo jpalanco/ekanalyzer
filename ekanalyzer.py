@@ -49,10 +49,14 @@ app.config.from_pyfile('config.py')
 
 connection = Connection(app.config['MONGODB_SERVER'] , app.config['MONGODB_PORT'])
 db = connection.ekanalyzer
-db.create_collection("analysis")
-db.create_collection("malicious")
-db.create_collection("pcap")
-db.create_collection("requests")
+try:
+  db.create_collection("analysis")
+  db.create_collection("malicious")
+  db.create_collection("pcap")
+  db.create_collection("requests")
+except errors.CollectionInvalid as e:
+  pass
+
 
 memcache = redis.Redis('localhost')
 
